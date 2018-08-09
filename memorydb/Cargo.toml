@@ -10,10 +10,10 @@ elastic-array = "0.10"
 heapsize = "0.4"
 hashdb = { version = "0.2.0", path = "../hashdb" }
 plain_hasher = { path = "../plain_hasher" }
-rlp = { version = "0.2.1", path = "../rlp" }
 
 [dev-dependencies]
 tiny-keccak = "1.4.2"
 ethereum-types = "0.3"
 keccak-hasher = { path = "../test-support/keccak-hasher" }
 keccak-hash = { path = "../keccak-hash" }
+rlp = { version = "0.2.1", path = "../rlp" }

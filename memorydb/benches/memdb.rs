@@ -27,6 +27,8 @@ use memorydb::MemoryDB;
 use keccak_hasher::KeccakHasher;
 use hashdb::{HashDB, Hasher};
 use keccak_hash::KECCAK_NULL_RLP;
+extern crate rlp;
+
 use rlp::NULL_RLP;
 use test::{Bencher, black_box};
 
@@ -34,7 +36,7 @@ use test::{Bencher, black_box};
 #[bench]
 fn instantiation(b: &mut Bencher) {
     b.iter(|| {
-        MemoryDB::<KeccakHasher>::new();
+        MemoryDB::<KeccakHasher>::new(&NULL_RLP);
     })
 }
 
@@ -60,7 +62,7 @@ fn compare_to_null_in_const(b: &mut Bencher) {
 
 #[bench]
 fn contains_with_non_null_key(b: &mut Bencher) {
-    let mut m = MemoryDB::<KeccakHasher>::new();
+    let mut m = MemoryDB::<KeccakHasher>::new(&NULL_RLP);
     let key = KeccakHasher::hash(b"abc");
     m.insert(b"abcefghijklmnopqrstuvxyz");
     b.iter(|| {
@@ -70,7 +72,7 @@ fn contains_with_non_null_key(b: &mut Bencher) {
 
 #[bench]
 fn contains_with_null_key(b: &mut Bencher) {
-    let mut m = MemoryDB::<KeccakHasher>::new();
+    let mut m = MemoryDB::<KeccakHasher>::new(&NULL_RLP);
     let null_key = KeccakHasher::hash(&NULL_RLP);
     m.insert(b"abcefghijklmnopqrstuvxyz");
     b.iter(|| {

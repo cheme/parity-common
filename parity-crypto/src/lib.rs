@@ -28,6 +28,7 @@ extern crate aes as raes;
 extern crate aes_ctr;
 extern crate block_modes;
 
+pub mod symmetric_cipher;
 pub mod aes;
 pub mod aes_gcm;
 pub mod error;

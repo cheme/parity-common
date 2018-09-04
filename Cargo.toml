@@ -19,3 +19,6 @@ members = [
 	"triehash",
 	"uint"
 ]
+
+[patch."https://github.com/paritytech/rust-rocksdb"]
+rocksdb = { path = "/home/emeric/work/rust-rocksdb" }

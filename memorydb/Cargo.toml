@@ -7,13 +7,14 @@ repository = "https://github.com/paritytech/parity-common"
 license = "GPL-3.0"
 
 [dependencies]
-heapsize = "0.4"
+parity-util-mem = { path = "../mem" }
 hashdb = { version = "0.3.0", path = "../hashdb" }
 plain_hasher = { version = "0.2", path = "../plain_hasher", default-features = false }
 rlp = { version = "0.3.0", path = "../rlp", default-features = false }
 
 [dev-dependencies]
 tiny-keccak = "1.4.2"
-ethereum-types = "0.4"
+# ethereum-types = "0.4" TODO revert when published
+ethereum-types = { path = "../../parity-primitives/ethereum-types" }
 keccak-hasher = { version = "0.1", path = "../test-support/keccak-hasher" }
 keccak-hash = { version = "0.1", path = "../keccak-hash" }

@@ -316,9 +316,9 @@ mod from_str {
 ))]
 #[test]
 fn test_heapsizeof() {
-	use heapsize::HeapSizeOf;
+	use parity_util_mem::malloc_size_of::{MallocSizeOf, MallocSizeOfExt};
 	let h = H128::zero();
-	assert_eq!(h.heap_size_of_children(), 0);
+	assert_eq!(h.m_size_of(), 0);
 }
 
 #[test]

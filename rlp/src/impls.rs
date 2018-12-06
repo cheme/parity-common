@@ -201,7 +201,7 @@ mod ethereum_traits {
 						cmp::Ordering::Equal => {
 							let mut t = [0u8; $size];
 							t.copy_from_slice(bytes);
-							Ok($name(t))
+							Ok($name::from(t))
 						}
 					})
 				}

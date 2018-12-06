@@ -19,3 +19,8 @@ members = [
 	"triehash",
 	"uint"
 ]
+[patch.crates-io]
+fixed-hash = { path = "./fixed-hash" }
+memorydb = { path = "./memorydb" }
+uint = { path = "./uint" }
+ethereum-types = { path = "../parity-primitives/ethereum-types" }

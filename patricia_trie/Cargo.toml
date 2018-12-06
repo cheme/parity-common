@@ -15,7 +15,8 @@ parity-bytes = { version = "0.1", path = "../parity-bytes" }
 
 [dev-dependencies]
 env_logger = "0.5"
-ethereum-types = "0.4"
+#ethereum-types = "0.4"
+ethereum-types = { path = "../../parity-primitives/ethereum-types" }
 keccak-hash = { version = "0.1", path = "../keccak-hash" }
 memorydb = { version = "0.3.0", path = "../memorydb", default-features = false }
 rlp = { version = "0.3.0", path = "../rlp", default-features = false }

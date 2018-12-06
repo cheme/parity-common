@@ -13,4 +13,5 @@ smallvec = "0.6"
 trace-time = { path = "../trace-time", version = "0.1" }
 
 [dev-dependencies]
-ethereum-types = "0.4"
+#ethereum-types = "0.4"
+ethereum-types = { path = "../../parity-primitives/ethereum-types" }

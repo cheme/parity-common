@@ -710,9 +710,12 @@ macro_rules! impl_heapsize_for_fixed_hash {
 #[doc(hidden)]
 macro_rules! impl_heapsize_for_fixed_hash {
 	( $name:ident ) => {
-		impl $crate::heapsize::HeapSizeOf for $name {
+		impl $crate::parity_util_mem::malloc_size_of::MallocSizeOf for $name {
 			#[inline]
-			fn heap_size_of_children(&self) -> usize {
+			fn size_of(
+				&self,
+				_ops: &mut $crate::parity_util_mem::malloc_size_of::MallocSizeOfOps,
+			) -> usize {
 				0
 			}
 		}

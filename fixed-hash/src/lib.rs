@@ -39,7 +39,7 @@ pub mod libc {}
 
 #[cfg(feature = "heapsize")]
 #[doc(hidden)]
-pub extern crate heapsize;
+pub extern crate parity_util_mem;
 
 #[cfg(feature = "rustc-hex")]
 #[doc(hidden)]

@@ -1314,8 +1314,12 @@ macro_rules! impl_std_for_uint {
 #[doc(hidden)]
 macro_rules! impl_heapsize_for_uint {
 	($name: ident) => {
-		impl $crate::heapsize::HeapSizeOf for $name {
-			fn heap_size_of_children(&self) -> usize {
+		impl $crate::parity_util_mem::malloc_size_of::MallocSizeOf for $name {
+			#[inline]
+			fn size_of(
+				&self,
+				_ops: &mut $crate::parity_util_mem::malloc_size_of::MallocSizeOfOps,
+			) -> usize {
 				0
 			}
 		}

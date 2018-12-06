@@ -51,7 +51,7 @@ impl TransactionBuilder {
 	}
 
 	pub fn new(self) -> Transaction {
-		let hash = self.nonce ^ (U256::from(100) * self.gas_price) ^ (U256::from(100_000) * U256::from(self.sender.low_u64()));
+		let hash = self.nonce ^ (U256::from(100) * self.gas_price) ^ (U256::from(100_000) * U256::from(self.sender.to_low_u64_be()));
 		Transaction {
 			hash: hash.into(),
 			nonce: self.nonce,

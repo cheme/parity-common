@@ -33,47 +33,47 @@ use test::{Bencher, black_box};
 
 #[bench]
 fn instantiation(b: &mut Bencher) {
-    b.iter(|| {
-        MemoryDB::<KeccakHasher, Vec<u8>>::new();
-    })
+		b.iter(|| {
+				MemoryDB::<KeccakHasher, Vec<u8>>::new();
+		})
 }
 
 #[bench]
 fn compare_to_null_embedded_in_struct(b: &mut Bencher) {
-    struct X {a_hash: <KeccakHasher as Hasher>::Out};
-    let x = X {a_hash: KeccakHasher::hash(&NULL_RLP)};
-    let key = KeccakHasher::hash(b"abc");
+		struct X {a_hash: <KeccakHasher as Hasher>::Out};
+		let x = X {a_hash: KeccakHasher::hash(&NULL_RLP)};
+		let key = KeccakHasher::hash(b"abc");
 
-    b.iter(|| {
-        black_box(key == x.a_hash);
-    })
+		b.iter(|| {
+				black_box(key == x.a_hash);
+		})
 }
 
 #[bench]
 fn compare_to_null_in_const(b: &mut Bencher) {
-    let key = KeccakHasher::hash(b"abc");
+		let key = KeccakHasher::hash(b"abc");
 
-    b.iter(|| {
-        black_box(key == KECCAK_NULL_RLP);
-    })
+		b.iter(|| {
+				black_box(key == KECCAK_NULL_RLP);
+		})
 }
 
 #[bench]
 fn contains_with_non_null_key(b: &mut Bencher) {
-    let mut m = MemoryDB::<KeccakHasher, Vec<u8>>::new();
-    let key = KeccakHasher::hash(b"abc");
-    m.insert(b"abcefghijklmnopqrstuvxyz");
-    b.iter(|| {
-        m.contains(&key);
-    })
+		let mut m = MemoryDB::<KeccakHasher, Vec<u8>>::new();
+		let key = KeccakHasher::hash(b"abc");
+		m.insert(b"abcefghijklmnopqrstuvxyz");
+		b.iter(|| {
+				m.contains(&key);
+		})
 }
 
 #[bench]
 fn contains_with_null_key(b: &mut Bencher) {
-    let mut m = MemoryDB::<KeccakHasher, Vec<u8>>::new();
-    let null_key = KeccakHasher::hash(&NULL_RLP);
-    m.insert(b"abcefghijklmnopqrstuvxyz");
-    b.iter(|| {
-        m.contains(&null_key);
-    })
+		let mut m = MemoryDB::<KeccakHasher, Vec<u8>>::new();
+		let null_key = KeccakHasher::hash(&NULL_RLP);
+		m.insert(b"abcefghijklmnopqrstuvxyz");
+		b.iter(|| {
+				m.contains(&null_key);
+		})
 }

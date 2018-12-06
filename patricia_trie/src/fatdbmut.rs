@@ -119,19 +119,19 @@ mod test {
 	#[test]
 	fn fatdbmut_to_trie() {
 		let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		{
 			let mut t = FatDBMut::new(&mut memdb, &mut root);
 			t.insert(&[0x01u8, 0x23], &[0x01u8, 0x23]).unwrap();
 		}
 		let t = TrieDB::new(&memdb, &root).unwrap();
-		assert_eq!(t.get(&keccak::keccak(&[0x01u8, 0x23])), Ok(Some(DBValue::from_slice(&[0x01u8, 0x23]))));
+		assert_eq!(t.get(&keccak::keccak(&[0x01u8, 0x23])[..]), Ok(Some(DBValue::from_slice(&[0x01u8, 0x23]))));
 	}
 
 	#[test]
 	fn fatdbmut_insert_remove_key_mapping() {
 		let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		let key = [0x01u8, 0x23];
 		let val = [0x01u8, 0x24];
 		let key_hash = keccak::keccak(&key);

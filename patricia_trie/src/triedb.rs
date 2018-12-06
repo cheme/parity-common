@@ -51,7 +51,7 @@ use std::borrow::Cow;
 ///
 /// fn main() {
 ///   let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-///   let mut root = H256::new();
+///   let mut root = H256::zero();
 ///   TrieDBMut::new(&mut memdb, &mut root).insert(b"foo", b"bar").unwrap();
 ///   let t = TrieDB::new(&memdb, &root).unwrap();
 ///   assert!(t.contains(b"foo").unwrap());
@@ -434,7 +434,7 @@ mod tests {
 		let d = vec![DBValue::from_slice(b"A"), DBValue::from_slice(b"AA"), DBValue::from_slice(b"AB"), DBValue::from_slice(b"B")];
 
 		let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		{
 			let mut t = TrieDBMut::new(&mut memdb, &mut root);
 			for x in &d {
@@ -452,7 +452,7 @@ mod tests {
 		let d = vec![ DBValue::from_slice(b"A"), DBValue::from_slice(b"AA"), DBValue::from_slice(b"AB"), DBValue::from_slice(b"B") ];
 
 		let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		{
 			let mut t = TrieDBMut::new(&mut memdb, &mut root);
 			for x in &d {
@@ -491,7 +491,7 @@ mod tests {
 	#[test]
 	fn get_len() {
 		let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		{
 			let mut t = TrieDBMut::new(&mut memdb, &mut root);
 			t.insert(b"A", b"ABC").unwrap();
@@ -509,7 +509,7 @@ mod tests {
 		let d = vec![ DBValue::from_slice(b"A"), DBValue::from_slice(b"AA"), DBValue::from_slice(b"AB"), DBValue::from_slice(b"B") ];
 
 		let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		let root = {
 			let mut t = TrieDBMut::new(&mut memdb, &mut root);
 			for x in &d {
@@ -619,7 +619,7 @@ mod tests {
 		use ethtrie::trie::NibbleSlice;
 
 		let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		{
 			let mut t = TrieDBMut::new(&mut memdb, &mut root);
 			t.insert(b"A", b"ABC").unwrap();

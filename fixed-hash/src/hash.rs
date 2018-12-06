@@ -46,11 +46,13 @@
 /// # 	assert_eq!(std::mem::size_of::<H512>(), 64);
 /// # }
 /// ```
+
 #[macro_export(local_inner_macros)]
 macro_rules! construct_fixed_hash {
 	( $(#[$attr:meta])* $visibility:vis struct $name:ident ( $n_bytes:expr ); ) => {
 		#[repr(C)]
 		$(#[$attr])*
+
 		$visibility struct $name ([u8; $n_bytes]);
 
 		impl From<[u8; $n_bytes]> for $name {
@@ -214,6 +216,19 @@ macro_rules! construct_fixed_hash {
 			pub fn is_zero(&self) -> bool {
 				self.as_bytes().iter().all(|&byte| byte == 0u8)
 			}
+
+			/// Constructs a hash type from the given reference
+			/// to the bytes array of fixed length. 
+			///
+			/// # Note
+			///
+			/// This is a constant function for initializing default values.
+			/// The given bytes are interpreted in big endian order.
+			#[inline]
+			pub const fn const_from(bytes: &'static [u8; $n_bytes]) -> $name {
+				$name(*bytes)
+			}
+
 		}
 
 		impl $crate::core_::fmt::Debug for $name {

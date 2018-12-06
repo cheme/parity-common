@@ -89,10 +89,10 @@ mod test {
 	#[test]
 	fn trie_to_sectrie() {
 		let mut db = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		{
 			let mut t = TrieDBMut::new(&mut db, &mut root);
-			t.insert(&keccak::keccak(&[0x01u8, 0x23]), &[0x01u8, 0x23]).unwrap();
+			t.insert(&keccak::keccak(&[0x01u8, 0x23])[..], &[0x01u8, 0x23]).unwrap();
 		}
 		let t = SecTrieDB::new(&db, &root).unwrap();
 		assert_eq!(t.get(&[0x01u8, 0x23]).unwrap().unwrap(), DBValue::from_slice(&[0x01u8, 0x23]));

@@ -341,7 +341,7 @@ mod tests {
 		let hello_bytes = b"Hello world!";
 		let mut hello_key = [0;32];
 		Keccak::keccak256(hello_bytes, &mut hello_key);
-		let hello_key = H256(hello_key);
+		let hello_key = H256::from(hello_key);
 
 		let mut m = MemoryDB::<KeccakHasher, Vec<u8>>::new();
 		m.remove(&hello_key);

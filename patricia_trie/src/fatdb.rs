@@ -133,7 +133,7 @@ mod test {
 	#[test]
 	fn fatdb_to_trie() {
 		let mut memdb = MemoryDB::<KeccakHasher, DBValue>::new();
-		let mut root = H256::new();
+		let mut root = H256::zero();
 		{
 			let mut t = FatDBMut::new(&mut memdb, &mut root);
 			t.insert(&[0x01u8, 0x23], &[0x01u8, 0x23]).unwrap();

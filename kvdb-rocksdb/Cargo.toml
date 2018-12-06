@@ -19,5 +19,5 @@ parity-rocksdb = "0.5"
 
 [dev-dependencies]
 tempdir = "0.3"
-#ethereum-types = "0.4"
+#ethereum-types = "0.5"
 ethereum-types = { path = "../../parity-primitives/ethereum-types" }

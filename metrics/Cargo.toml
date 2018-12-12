@@ -1,0 +1,16 @@
+[package]
+name = "metrics-poc"
+version = "0.1.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+repository = "https://github.com/paritytech/parity-common"
+description = "Metrics poc"
+license = "GPL-3.0"
+
+[dependencies]
+prometheus = { version = "0.4", optional = true }
+lazy_static = { version = "*", optional = true }
+
+[features]
+default = ["std"]
+std = ["prometheus_backend"]
+prometheus_backend = ["prometheus", "lazy_static"]

@@ -32,6 +32,8 @@ const METRICS_DEF: [u8] = include_bytes!("./config/parity-ethereum.json"); // ei
 #[cfg(feature = "conf_proj2")]
 const METRICS_DEF: [u8] = include_bytes!("./config/parity-zcash.json"); // either json
 
+#[macro_use]
+pub extern crate log;
 
 #[cfg(feature = "std")]
 #[macro_use]
@@ -39,48 +41,93 @@ extern crate lazy_static;
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate prometheus;
+#[macro_export]
+macro_rules! error {
+  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
+    $crate::backend::inc::$name();
+    $crate::log::error!(target: $target, $($arg)+)
+	};
+  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
+    $crate::backend::by::$name($laz);
+    $crate::log::error!(target: $target, $($arg)+)
+	};
+	(target: $target:expr, $($arg:tt)+) => {
+    $crate::log::error!(target: $target, $($arg)+)
+	};
+	($($arg:tt)+) => {
+    $crate::log::error!($($arg)+)
+	};
+}
 
 
 #[macro_export]
-macro_rules! warnm {
-  (metric($name:ident), $exp:expr) => {
+macro_rules! trace {
+  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
     $crate::backend::inc::$name();
-    warn!($exp)
+    $crate::log::trace!(target: $target, $($arg)+)
 	};
-  (metric($name:ident, $laz:expr), $exp:expr) => {
+  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
     $crate::backend::by::$name($laz);
-    warn!($exp)
+    $crate::log::trace!(target: $target, $($arg)+)
 	};
-	($exp:expr) => {
-    warn!($exp)
+	(target: $target:expr, $($arg:tt)+) => {
+    $crate::log::trace!(target: $target, $($arg)+)
+	};
+	($($arg:tt)+) => {
+    $crate::log::trace!($($arg)+)
+	};
+}
+
+#[macro_export]
+macro_rules! warn {
+  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
+    $crate::backend::inc::$name();
+    $crate::log::warn!(target: $target, $($arg)+)
+	};
+  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
+    $crate::backend::by::$name($laz);
+    $crate::log::warn!(target: $target, $($arg)+)
+	};
+	(target: $target:expr, $($arg:tt)+) => {
+    $crate::log::warn!(target: $target, $($arg)+)
+	};
+	($($arg:tt)+) => {
+    $crate::log::warn!($($arg)+)
+	};
+
+}
+#[macro_export]
+macro_rules! info {
+  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
+    $crate::backend::inc::$name();
+    $crate::log::info!(target: $target, $($arg)+)
+	};
+  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
+    $crate::backend::by::$name($laz);
+    $crate::log::info!(target: $target, $($arg)+)
+	};
+	(target: $target:expr, $($arg:tt)+) => {
+    $crate::log::info!(target: $target, $($arg)+)
+	};
+	($($arg:tt)+) => {
+    $crate::log::info!($($arg)+)
 	};
 }
 #[macro_export]
-macro_rules! infom {
-  (metric($name:ident), $exp:expr) => {
+macro_rules! debug {
+  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
     $crate::backend::inc::$name();
-    info!($exp)
+    $crate::log::debug!(target: $target, $($arg)+)
 	};
-  (metric($name:ident, $laz:expr), $exp:expr) => {
+  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
     $crate::backend::by::$name($laz);
-    info!($exp)
+    $crate::log::debug!(target: $target, $($arg)+)
 	};
-	($exp:expr) => {
-    info!($exp)
+	(target: $target:expr, $($arg:tt)+) => {
+    $crate::log::debug!(target: $target, $($arg)+)
 	};
-}
-#[macro_export]
-macro_rules! debugm {
-  (metric($name:ident), $exp:expr) => {
-    $crate::backend::inc::$name();
-    debug!($exp)
-	};
-  (metric($name:ident, $laz:expr), $exp:expr) => {
-    $crate::backend::by::$name($laz);
-    debug!($exp)
-	};
-	($exp:expr) => {
-    debug!($exp)
+	($($arg:tt)+) => {
+    $crate::log::debug!($($arg)+)
 	};
 }
 #[macro_export]
@@ -88,9 +135,9 @@ macro_rules! do_metric {
   ($name:ident) => {
     $crate::backend::inc::$name();
 	};
-  ($name:ident, $laz:expr) => {
+  ($name:ident, $laz:expr, $($arg:tt)+) => {
     $crate::backend::by::$name($laz);
-    debug!($exp)
+    $crate::log::debug!($exp)
 	};
 }
 
@@ -114,13 +161,14 @@ pub mod backend {
   pub mod inc {
     /// generated function for metrics config defined counter
     pub fn a_int_counter() {
+      panic!("s");
       super::A_INT_COUNTER.inc()
     }
   }
   /// mod for poc without proc macro: with a proc macro having a secific fn name is easy
   pub mod by {
     /// generated function for metrics config defined counter
-    pub fn inc_by_A_INT_COUNTER(lazy_nb : impl Fn() -> i64) {
+    pub fn a_int_counter(lazy_nb : impl Fn() -> i64) {
       super::A_INT_COUNTER.inc_by(lazy_nb())
     }
   }
@@ -137,8 +185,9 @@ pub mod backend {
   /// mod for poc without proc macro: with a proc macro having a secific fn name is easy
   pub mod by {
     /// generated function for metrics config defined counter
-    pub fn inc_by_A_INT_COUNTER(_lazy_nb : impl Fn() -> i64) {
+    pub fn a_int_counter(_lazy_nb : impl Fn() -> i64) {
     }
   }
 }
 
+// TODO csv backend...

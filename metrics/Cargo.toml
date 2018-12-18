@@ -9,6 +9,7 @@ license = "GPL-3.0"
 [dependencies]
 prometheus = { version = "0.4", optional = true }
 lazy_static = { version = "*", optional = true }
+log = "0.4"
 
 [features]
 default = ["std"]

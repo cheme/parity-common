@@ -8,10 +8,11 @@ license = "GPL-3.0"
 
 [dependencies]
 prometheus = { version = "0.4", optional = true }
+parking_lot = { version = "*", optional = true }
 lazy_static = { version = "*", optional = true }
 log = "0.4"
 
 [features]
-default = ["std"]
-std = ["prometheus_backend"]
-prometheus_backend = ["prometheus", "lazy_static"]
+default = ["std", "pro"]
+std = []
+pro = ["prometheus", "lazy_static", "parking_lot"]

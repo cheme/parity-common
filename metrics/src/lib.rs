@@ -22,6 +22,12 @@
 //#![cfg_attr(not(feature = "std"), feature(core_intrinsics))]
 //#![cfg_attr(not(feature = "std"), feature(alloc))]
 
+#[cfg(feature = "std")]
+#[cfg(feature = "slogger")]
+#[macro_use]
+extern crate slog;
+
+
 /// METRICS_DEF is byte content to define the metrics configuration
 /// format is json as sample but undefined at this point.
 /// The point is that we want direct pointer to things to store (no key value mapping for
@@ -35,6 +41,7 @@ const METRICS_DEF: [u8] = include_bytes!("./config/parity-zcash.json"); // eithe
 
 /// drafting some spec
 /// Those could be set from command line or ext file not at compile time
+/// TODO some of those items does not make sense (specific should only be option delay...)
 #[derive(Clone)]
 pub struct GlobalCommonDef {
   dest: OutputDest,
@@ -89,106 +96,70 @@ extern crate lazy_static;
 #[cfg(feature = "pro")]
 #[macro_use]
 extern crate prometheus;
+
+// static all backends definition
+/*macro_rules! BACKENDS(() => {
+  [pro,empty]
+}
+);*/
+
 #[macro_export]
-macro_rules! error {
-  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::inc::$name();
-    $crate::log::error!(target: $target, $($arg)+)
+macro_rules! metrics {
+  ([$($be:ident),*], $name:ident, $action:ident: $laz:expr, $level:ident, target: $target:expr, $($arg:tt)+) => {
+    $($crate::$be::$action::$name($laz);)*
+    $crate::log::$level!(target: $target, $($arg)+)
 	};
-  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::by::$name($laz);
-    $crate::log::error!(target: $target, $($arg)+)
-	};
-	(target: $target:expr, $($arg:tt)+) => {
-    $crate::log::error!(target: $target, $($arg)+)
-	};
-	($($arg:tt)+) => {
-    $crate::log::error!($($arg)+)
+  ([$($be:ident),*], $name:ident, $action:ident: $laz:expr) => {
+    $($crate::$be::$action::$name($laz);)*
 	};
 }
 
-
+// conf specific short
 #[macro_export]
-macro_rules! trace {
-  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::inc::$name();
-    $crate::log::trace!(target: $target, $($arg)+)
+macro_rules! mets {
+  ($name:ident, $action:ident: $laz:expr, $level:ident, target: $target:expr, $($arg:tt)+) => {
+    metrics!([pro, slogger], $name, $action: $laz, $level, target: $target, $($arg)+)
 	};
-  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::by::$name($laz);
-    $crate::log::trace!(target: $target, $($arg)+)
+  ($name:ident, $action:ident: $laz:expr) => {
+    metrics!([pro, slogger], $name, $action: $laz)
 	};
-	(target: $target:expr, $($arg:tt)+) => {
-    $crate::log::trace!(target: $target, $($arg)+)
+  (fast_only, $name:ident, $action:ident: $laz:expr, $level:ident, target: $target:expr, $($arg:tt)+) => {
+    metrics!([pro], $name, $action: $laz, $level, target: $target, $($arg)+)
 	};
-	($($arg:tt)+) => {
-    $crate::log::trace!($($arg)+)
+  (fast_only, $name:ident, $action:ident: $laz:expr) => {
+    metrics!([pro], $name, $action: $laz)
 	};
 }
 
-#[macro_export]
-macro_rules! warn {
-  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::inc::$name();
-    $crate::log::warn!(target: $target, $($arg)+)
-	};
-  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::by::$name($laz);
-    $crate::log::warn!(target: $target, $($arg)+)
-	};
-	(target: $target:expr, $($arg:tt)+) => {
-    $crate::log::warn!(target: $target, $($arg)+)
-	};
-	($($arg:tt)+) => {
-    $crate::log::warn!($($arg)+)
-	};
+macro_rules! metrics_defaults { () => {
+  lazy_static! {
+    // getting conf from cmd line | other will be extra shitty crate `once_cell` is probably way
+    // more appropriate to do thing nicely!!
+    static ref STATE: States = {
+      let conf = &DEFAULT_CONF;
+      let st = init_states(conf);
+      start_metrics(st.clone(), conf.clone());
+      st
+    };
+  }
 
-}
-#[macro_export]
-macro_rules! info {
-  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::inc::$name();
-    $crate::log::info!(target: $target, $($arg)+)
-	};
-  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::by::$name($laz);
-    $crate::log::info!(target: $target, $($arg)+)
-	};
-	(target: $target:expr, $($arg:tt)+) => {
-    $crate::log::info!(target: $target, $($arg)+)
-	};
-	($($arg:tt)+) => {
-    $crate::log::info!($($arg)+)
-	};
-}
-#[macro_export]
-macro_rules! debug {
-  (metric: $name:ident, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::inc::$name();
-    $crate::log::debug!(target: $target, $($arg)+)
-	};
-  (metric: $name:ident, by: $laz:expr, target: $target:expr, $($arg:tt)+) => {
-    $crate::backend::by::$name($laz);
-    $crate::log::debug!(target: $target, $($arg)+)
-	};
-	(target: $target:expr, $($arg:tt)+) => {
-    $crate::log::debug!(target: $target, $($arg)+)
-	};
-	($($arg:tt)+) => {
-    $crate::log::debug!($($arg)+)
-	};
-}
-#[macro_export]
-macro_rules! do_metric {
-  ($name:ident) => {
-    $crate::backend::inc::$name();
-	};
-  ($name:ident, $laz:expr, $($arg:tt)+) => {
-    $crate::backend::by::$name($laz);
-    $crate::log::debug!($exp)
-	};
-}
+  pub mod inc {
+    /// generated function for metrics config defined counter
+    pub fn a_int_counter() {
+      println!("s");
+      super::STATE.a_int_counter_inc()
+    }
+  }
 
+  /// mod for poc without proc macro: with a proc macro having a secific fn name is easy
+  pub mod by {
+    /// generated function for metrics config defined counter
+    pub fn a_int_counter(nb : i64) {
+      super::STATE.a_int_counter_inc_by(nb)
+    }
+  }
+
+}}
 
 /// this module should be genereated by METRICS_DEF by a simple proc_macro
 /// (adding some named ref counter to the struct and other variants).
@@ -200,7 +171,7 @@ macro_rules! do_metric {
 /// -> not sure that it is doable (I could understand that being blocked).
 #[cfg(feature = "std")]
 #[cfg(feature = "pro")]
-pub mod backend {
+pub mod pro {
 
   extern crate parking_lot;
 
@@ -229,7 +200,7 @@ const DEFAULT_CONF: super::GlobalCommonDef = super::GlobalCommonDef {
   /// TODO allow plugin of a future runtime (a variant of the method (lazy starting will start 
   /// with this method).
   /// TODO only spawn if needed (if on close only do not)
-  fn start_telemetry(state: States, conf: super::GlobalCommonDef) {
+  fn start_metrics(state: States, conf: super::GlobalCommonDef) {
     std::thread::spawn(move || {
 
       let state = state;
@@ -284,8 +255,7 @@ impl Drop for States {
     let file_handle = std::sync::Arc::new(RwLock::new({
     if let super::OutputDest::File(ref opath) = config.dest {
       // TODO use Path instead of clone.
-      let path = opath.clone().unwrap_or_else(||std::path::PathBuf::from_str(DEFAULT_FILE_OUTPUT)
-                                      .expect("TODO create err type"));
+      let path = opath.clone().unwrap_or_else(||std::path::PathBuf::from(DEFAULT_FILE_OUTPUT.to_string()));
       // TODO support for append (need a dest type)
       std::fs::File::create(path).unwrap()
     } else {
@@ -319,41 +289,27 @@ impl Drop for States {
     }
   }
 
-
-  lazy_static! {
-    // getting conf from cmd line | other will be extra shitty crate `once_cell` is probably way
-    // more appropriate to do thing nicely!!
-    static ref STATE: States = {
-      let conf = &DEFAULT_CONF;
-      let st = init_states(conf);
-      start_telemetry(st.clone(), conf.clone());
-      st
-    };
+// TODO gen it (also states)
+impl States {
+  fn a_int_counter_inc(&self) {
+    self.a_int_counter.inc();
   }
-
-  pub mod inc {
-    /// generated function for metrics config defined counter
-    pub fn a_int_counter() {
-      println!("s");
-      super::STATE.a_int_counter.inc()
-    }
+  fn a_int_counter_inc_by(&self, nb: i64) {
+    self.a_int_counter.inc_by(nb);
   }
+}
 
-  /// mod for poc without proc macro: with a proc macro having a secific fn name is easy
-  pub mod by {
-    /// generated function for metrics config defined counter
-    pub fn a_int_counter(nb : i64) {
-      super::STATE.a_int_counter.inc_by(nb)
-    }
-  }
+
+  metrics_defaults!();
+
 }
 
 // incomplet feature test : move backend in their own file behind prom and put no std variant
 // import here to make it right
-#[cfg(not(feature = "std"))]
-pub mod backend {
+pub mod empty {
 
-const DEFAULT_FILE_OUTPUT: &'static str = "./dummy"; // never write
+  use super::*;
+  const DEFAULT_FILE_OUTPUT: &'static str = "./dummy"; // never write
   const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
     dest: OutputDest::Logger,
     out_mode: OutputMode::Append,
@@ -362,18 +318,89 @@ const DEFAULT_FILE_OUTPUT: &'static str = "./dummy"; // never write
     chan_write: false,
   };
 
-  pub mod inc {
-    /// generated function for metrics config defined counter
-    pub fn a_int_counter() {
+  #[derive(Clone)]
+  pub struct States;
+
+  fn init_states(config: &super::GlobalCommonDef) -> States { States }
+
+  fn start_metrics(state: States, conf: super::GlobalCommonDef) {
+  }
+
+  metrics_defaults!();
+  impl States {
+    fn a_int_counter_inc(&self) {
+    }
+    fn a_int_counter_inc_by(&self, nb: i64) {
     }
   }
 
-  /// mod for poc without proc macro: with a proc macro having a secific fn name is easy
-  pub mod by {
-    /// generated function for metrics config defined counter
-    pub fn a_int_counter(_nb : i64) {
-    }
-  }
+
 }
 
+#[cfg(feature = "std")]
+#[cfg(feature = "slogger")]
+pub mod slogger {
+  extern crate slog_json;
+  extern crate slog_async;
+  use super::*;
+  use self::slog::Drain;
+  use std::io::Write;
+  const CHANNEL_SIZE: usize = 262144;
+  const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
+    dest: OutputDest::Logger,
+    out_mode: OutputMode::Append,
+    out_delay: OutputDelay::Synch,
+    out_onclose: true,
+    chan_write: false,
+  };
+
+  #[derive(Clone)]
+  pub struct States (slog::Logger<std::sync::Arc<dyn slog::SendSyncRefUnwindSafeDrain<Ok=(), Err=slog::Never>>>);
+
+  pub fn init_states(config: &super::GlobalCommonDef) -> States {
+    let out_sync = std::io::stderr();
+
+	let log = slog::Logger::root(
+		slog_async::Async::new(
+			slog_json::Json::default(
+       out_sync 
+        ).fuse()
+		).chan_size(CHANNEL_SIZE)
+		.overflow_strategy(slog_async::OverflowStrategy::DropAndReport)
+		.build().fuse(), o!()
+   );
+    /*let root = slog::Logger::root(
+      Mutex::new(slog_json::Json::default(std::io::stderr())).map(slog::Fuse),
+      o!()
+    );*/
+    // TODO if not synch a thread and channel
+  	return States(log);
+  }
+
+
+  impl Drop for States {
+    fn drop(&mut self) {
+      std::io::stderr().flush();
+    }
+  }
+  fn start_metrics(state: States, conf: super::GlobalCommonDef) {
+  }
+
+  metrics_defaults!();
+  impl States {
+    fn a_int_counter_inc(&self) {
+      slog_info!(&self.0, "counter"; "a_int_counter" => "1");
+    }
+    fn a_int_counter_inc_by(&self, nb: i64) {
+      slog_info!(&self.0, "counter"; "a_int_counter" => nb);
+    }
+  }
+
+
+}
+
+#[test]
+fn test_metrics() {
+  mets!(a_int_counter, by: 1, warn, target: "anything", "some additional logs {}", 123);
+}
 // TODO csv backend (reuse substrate telemetry code for json direct log format)...

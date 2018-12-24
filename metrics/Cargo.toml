@@ -11,8 +11,12 @@ prometheus = { version = "0.4", optional = true }
 parking_lot = { version = "*", optional = true }
 lazy_static = { version = "*", optional = true }
 log = "0.4"
+slog = { version = "^2", optional = true }
+slog-json = { version = "^2", optional = true }
+slog-async = { version = "^2", optional = true }
 
 [features]
-default = ["std", "pro"]
+default = ["std", "pro", "slogger"]
 std = []
 pro = ["prometheus", "lazy_static", "parking_lot"]
+slogger = ["slog", "slog-json", "slog-async"]

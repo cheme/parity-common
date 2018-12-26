@@ -1,7 +1,9 @@
 
 use super::*;
+
+
 const DEFAULT_FILE_OUTPUT: &'static str = "./dummy"; // never write
-const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
+pub const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
   dest: OutputDest::Logger,
   out_mode: OutputMode::Append,
   out_delay: OutputDelay::Synch,
@@ -10,19 +12,28 @@ const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
 };
 
 #[derive(Clone)]
-pub struct States;
+pub struct Counter;
 
-fn init_states(config: &super::GlobalCommonDef) -> States { States }
+impl Counter {
+  pub fn init(name: &'static str, gl: &GlobalStates) -> Self {
+    Counter
+  }
+  pub fn inc(&self) {
+  }
+  pub fn by(&self, _nb: i64) {
+  }
+}
 
-fn start_metrics(state: States, conf: super::GlobalCommonDef) -> Result<(), Error> {
+
+#[derive(Clone)]
+pub struct GlobalStates;
+
+pub fn async_write(states: &GlobalStates) { }
+
+pub fn init_states(config: &super::GlobalCommonDef) -> GlobalStates {
+  GlobalStates
+}
+
+pub fn start_metrics(state: &GlobalStates, conf: super::GlobalCommonDef) -> Result<(), Error> {
   Ok(())
 }
-
-impl States {
-  fn a_int_counter_inc(&self) {
-  }
-  fn a_int_counter_inc_by(&self, nb: i64) {
-  }
-}
-
-metrics_defaults!();

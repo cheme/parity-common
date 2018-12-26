@@ -39,7 +39,7 @@ pub type Error = ();
 
 
 #[macro_use]
-pub extern crate metrics_procedural;
+pub extern crate metrics_procedural as metrics_derive;
 
 
 
@@ -112,18 +112,12 @@ pub enum OutputMode {
 pub extern crate log;
 
 #[cfg(feature = "std")]
-#[macro_use]
-extern crate once_cell;
+pub extern crate once_cell;
+
 #[cfg(feature = "std")]
 #[cfg(feature = "pro")]
 #[macro_use]
 extern crate prometheus;
-
-// static all backends definition
-/*macro_rules! BACKENDS(() => {
-  [pro,empty]
-}
-);*/
 
 /*#[macro_export]
 macro_rules! metrics {
@@ -136,16 +130,6 @@ macro_rules! metrics {
 	};
 }*/
 
-#[macro_export]
-macro_rules! mets {
-  ($($exp:tt)*) => {
-    metrics!([pro, slogger], $($exp)*)
-  };
-  (fast_only, $($exp:tt)*) => {
-    metrics!([pro], $($exp)*)
-	};
-}
-
 macro_rules! metrics_defaults { () => {
   #[cfg(feature = "std")]
   static STATE: once_cell::sync::OnceCell<States> = 
@@ -156,10 +140,11 @@ macro_rules! metrics_defaults { () => {
 //    STATE.get_or_try_init(|| {
     STATE.get_or_init(|| {
       let conf = &DEFAULT_CONF;
-      let st = init_states(conf);
+      /* TODO in macro with init_derivede... let st = init_states(conf, derived_state);
       start_metrics(st.clone(), conf.clone())
         .expect("Fail on metrics states initialization");
-      st
+      st*/
+      unimplemented!()
 //      Ok(st)
     })
   }
@@ -212,10 +197,7 @@ pub mod empty;
 #[cfg(not(all(feature = "std",feature = "slogger")))]
 #[path = "empty.rs"]
 pub mod slogger;
- 
 
-#[test]
-fn test_metrics() {
-  mets!(a_int_counter, by(1), warn, target "anything", "some additional logs {}", 123);
-  mets!(a_int_counter, inc());
-}
+
+/// Define an integer counter
+pub struct Counter {}

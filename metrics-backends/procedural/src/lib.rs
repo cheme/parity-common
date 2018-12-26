@@ -16,10 +16,14 @@ extern crate quote;
 
 #[macro_use]
 extern crate srml_support_procedural_tools;
+#[macro_use]
+extern crate synstructure;
 
 use proc_macro::TokenStream;
 
 mod metrics;
+
+mod modules;
 
 /**
  * Main macro for declaring metrics usage.
@@ -30,4 +34,10 @@ mod metrics;
 #[proc_macro]
 pub fn metrics(input: TokenStream) -> TokenStream {
 	metrics::metrics_impl(input)
+}
+
+#[proc_macro_attribute]
+pub fn metrics_modules(attr: TokenStream, input: TokenStream) -> TokenStream {
+	let metas = parse_macro_input!(attr as syn::AttributeArgs);
+  modules::modules_impl(metas, input)
 }

@@ -1,0 +1,15 @@
+[package]
+name = "metrics-backends-tests"
+version = "0.1.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+publish = false
+repository = "https://github.com/paritytech/parity-common"
+description = "Metrics backends tests"
+license = "GPL-3.0"
+
+[dependencies]
+metrics-backends = { path = ".." }
+
+[features]
+default = ["std"]
+std = []

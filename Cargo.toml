@@ -20,4 +20,5 @@ members = [
 	"uint",
 	"metrics-backends",
 	"metrics-backends/procedural",
+	"metrics-backends/tests",
 ]

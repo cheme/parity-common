@@ -8,7 +8,7 @@ use super::*;
 use self::slog::Drain;
 use std::io::Write;
 const CHANNEL_SIZE: usize = 262144;
-const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
+pub const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
   dest: OutputDest::Logger,
   out_mode: OutputMode::Append,
   out_delay: OutputDelay::Synch,
@@ -17,9 +17,28 @@ const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
 };
 
 #[derive(Clone)]
-pub struct States (slog::Logger<std::sync::Arc<dyn slog::SendSyncRefUnwindSafeDrain<Ok=(), Err=slog::Never>>>);
+pub struct Counter(&'static str, GlobalStates);
 
-pub fn init_states(config: &super::GlobalCommonDef) -> States {
+impl Counter {
+  pub fn init(name: &'static str, gl: &GlobalStates) -> Self {
+    Counter(name, gl.clone())
+  }
+  pub fn inc(&self) {
+    slog_info!(&(self.1).0, "counter"; "a_int_counter" => "1");
+  }
+  pub fn by(&self, nb: i64) {
+    slog_info!(&(self.1).0, "counter"; "a_int_counter" => nb);
+  }
+
+}
+
+
+#[derive(Clone)]
+pub struct GlobalStates(slog::Logger<std::sync::Arc<dyn slog::SendSyncRefUnwindSafeDrain<Ok=(), Err=slog::Never>>>);
+
+pub fn async_write(states: &GlobalStates) { }
+
+pub fn init_states(config: &super::GlobalCommonDef) -> GlobalStates {
   let out_sync = std::io::stderr();
 
   let log = slog::Logger::root(
@@ -32,24 +51,15 @@ pub fn init_states(config: &super::GlobalCommonDef) -> States {
 	.build().fuse(), o!()
   );
   // TODO if not synch a thread and channel
-	return States(log);
+  GlobalStates(log)
 }
 
-impl Drop for States {
+impl Drop for GlobalStates {
   fn drop(&mut self) {
     std::io::stderr().flush();
   }
 }
-fn start_metrics(state: States, conf: super::GlobalCommonDef) -> Result<(), Error> {
-  Ok(())
-}
 
-metrics_defaults!();
-impl States {
-  fn a_int_counter_inc(&self) {
-    slog_info!(&self.0, "counter"; "a_int_counter" => "1");
-  }
-  fn a_int_counter_inc_by(&self, nb: i64) {
-    slog_info!(&self.0, "counter"; "a_int_counter" => nb);
-  }
+pub fn start_metrics(state: &GlobalStates, conf: super::GlobalCommonDef) -> Result<(), Error> {
+  Ok(())
 }

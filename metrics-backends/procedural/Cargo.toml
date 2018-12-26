@@ -11,6 +11,7 @@ proc-macro = true
 
 [dependencies]
 srml-support-procedural-tools = { git = "https://github.com/paritytech/substrate", rev = "b6de5d63e00863471c6f2da6807f10a8a025dd9a" }
+synstructure = { version = "0.10" }
 #sr-api-macros = { git = "https://github.com/paritytech/substrate", rev = "b6de5d63e00863471c6f2da6807f10a8a025dd9a" }
 
 proc-macro2 = "0.4"

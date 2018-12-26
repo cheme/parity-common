@@ -40,7 +40,8 @@ impl Drop for States {
     std::io::stderr().flush();
   }
 }
-fn start_metrics(state: States, conf: super::GlobalCommonDef) {
+fn start_metrics(state: States, conf: super::GlobalCommonDef) -> Result<(), Error> {
+  Ok(())
 }
 
 metrics_defaults!();

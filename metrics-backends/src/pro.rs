@@ -1,6 +1,9 @@
 
 extern crate parking_lot;
 
+use super::{
+  Error,
+};
 use self::parking_lot::{
   RwLock,
 };
@@ -26,7 +29,7 @@ const DEFAULT_CONF: super::GlobalCommonDef = super::GlobalCommonDef {
 /// TODO allow plugin of a future runtime (a variant of the method (lazy starting will start 
 /// with this method).
 /// TODO only spawn if needed (if on close only do not)
-fn start_metrics(state: States, conf: super::GlobalCommonDef) {
+fn start_metrics(state: States, conf: super::GlobalCommonDef) -> Result<(), Error> {
   std::thread::spawn(move || {
 
     let state = state;
@@ -41,13 +44,14 @@ fn start_metrics(state: States, conf: super::GlobalCommonDef) {
     }
 
   });
+  Ok(())
 }
 
 
 impl Drop for States {
   fn drop(&mut self) {
     // TODO if right mode (no need to gate that behind macro)
-    collect_write(&STATE)
+    collect_write(get_metrics_states())
   }
 }
 

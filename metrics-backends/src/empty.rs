@@ -14,7 +14,8 @@ pub struct States;
 
 fn init_states(config: &super::GlobalCommonDef) -> States { States }
 
-fn start_metrics(state: States, conf: super::GlobalCommonDef) {
+fn start_metrics(state: States, conf: super::GlobalCommonDef) -> Result<(), Error> {
+  Ok(())
 }
 
 impl States {

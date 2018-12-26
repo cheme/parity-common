@@ -18,6 +18,7 @@
 //! Single backend prometheus, but still a plugoff feature (here using `std` as activation feature)
 //! The poc allows only one action per logging but target is multiple possible actions.
 
+#![feature(proc_macro_hygiene)]
 #![cfg_attr(not(feature = "std"), no_std)]
 //#![cfg_attr(not(feature = "std"), feature(core_intrinsics))]
 //#![cfg_attr(not(feature = "std"), feature(alloc))]
@@ -27,6 +28,27 @@
 #[macro_use]
 extern crate slog;
 
+#[macro_use]
+extern crate failure;
+
+#[cfg(std)]
+pub type Error = failure::Error;
+
+#[cfg(not(std))]
+pub type Error = ();
+
+
+#[macro_use]
+pub extern crate metrics_procedural;
+
+
+
+// Currently unused TODO delete?
+#[derive(Debug, Fail)]
+pub enum MetricsError {
+  #[fail(display = "an error: {}", label)]
+  AnError{ label: String },
+}
 
 /// METRICS_DEF is byte content to define the metrics configuration
 /// format is json as sample but undefined at this point.
@@ -91,7 +113,7 @@ pub extern crate log;
 
 #[cfg(feature = "std")]
 #[macro_use]
-extern crate lazy_static;
+extern crate once_cell;
 #[cfg(feature = "std")]
 #[cfg(feature = "pro")]
 #[macro_use]
@@ -103,7 +125,7 @@ extern crate prometheus;
 }
 );*/
 
-#[macro_export]
+/*#[macro_export]
 macro_rules! metrics {
   ([$($be:ident),*], $name:ident, $action:ident: $laz:expr, $level:ident, target: $target:expr, $($arg:tt)+) => {
     $($crate::$be::$action::$name($laz);)*
@@ -112,50 +134,50 @@ macro_rules! metrics {
   ([$($be:ident),*], $name:ident, $action:ident: $laz:expr) => {
     $($crate::$be::$action::$name($laz);)*
 	};
-}
+}*/
 
-// conf specific short
 #[macro_export]
 macro_rules! mets {
-  ($name:ident, $action:ident: $laz:expr, $level:ident, target: $target:expr, $($arg:tt)+) => {
-    metrics!([pro, slogger], $name, $action: $laz, $level, target: $target, $($arg)+)
-	};
-  ($name:ident, $action:ident: $laz:expr) => {
-    metrics!([pro, slogger], $name, $action: $laz)
-	};
-  (fast_only, $name:ident, $action:ident: $laz:expr, $level:ident, target: $target:expr, $($arg:tt)+) => {
-    metrics!([pro], $name, $action: $laz, $level, target: $target, $($arg)+)
-	};
-  (fast_only, $name:ident, $action:ident: $laz:expr) => {
-    metrics!([pro], $name, $action: $laz)
+  ($($exp:tt)*) => {
+    metrics!([pro, slogger], $($exp)*)
+  };
+  (fast_only, $($exp:tt)*) => {
+    metrics!([pro], $($exp)*)
 	};
 }
 
 macro_rules! metrics_defaults { () => {
-  lazy_static! {
-    // getting conf from cmd line | other will be extra shitty crate `once_cell` is probably way
-    // more appropriate to do thing nicely!!
-    static ref STATE: States = {
+  #[cfg(feature = "std")]
+  static STATE: once_cell::sync::OnceCell<States> = 
+    once_cell::sync::OnceCell::INIT;
+
+  #[cfg(feature = "std")]
+  pub fn get_metrics_states() -> &'static States {
+//    STATE.get_or_try_init(|| {
+    STATE.get_or_init(|| {
       let conf = &DEFAULT_CONF;
       let st = init_states(conf);
-      start_metrics(st.clone(), conf.clone());
+      start_metrics(st.clone(), conf.clone())
+        .expect("Fail on metrics states initialization");
       st
-    };
+//      Ok(st)
+    })
   }
 
+  #[cfg(feature = "std")]
   pub mod inc {
     /// generated function for metrics config defined counter
     pub fn a_int_counter() {
-      println!("s");
-      super::STATE.a_int_counter_inc()
+      super::get_metrics_states().a_int_counter_inc()
     }
   }
 
+  #[cfg(feature = "std")]
   /// mod for poc without proc macro: with a proc macro having a secific fn name is easy
   pub mod by {
     /// generated function for metrics config defined counter
     pub fn a_int_counter(nb : i64) {
-      super::STATE.a_int_counter_inc_by(nb)
+      super::get_metrics_states().a_int_counter_inc_by(nb)
     }
   }
 
@@ -194,6 +216,6 @@ pub mod slogger;
 
 #[test]
 fn test_metrics() {
-  mets!(a_int_counter, by: 1, warn, target: "anything", "some additional logs {}", 123);
+  mets!(a_int_counter, by(1), warn, target "anything", "some additional logs {}", 123);
+  mets!(a_int_counter, inc());
 }
-// TODO csv backend (reuse substrate telemetry code for json direct log format)...

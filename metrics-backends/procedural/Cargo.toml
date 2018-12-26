@@ -1,0 +1,18 @@
+[package]
+name = "metrics-procedural"
+version = "0.1.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+publish = false
+description = "Metrics procedural macros crate"
+license = "GPL-3.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+srml-support-procedural-tools = { git = "https://github.com/paritytech/substrate", rev = "b6de5d63e00863471c6f2da6807f10a8a025dd9a" }
+#sr-api-macros = { git = "https://github.com/paritytech/substrate", rev = "b6de5d63e00863471c6f2da6807f10a8a025dd9a" }
+
+proc-macro2 = "0.4"
+quote = { version = "0.6" }
+syn = { version = "0.15", features = ["full"] }

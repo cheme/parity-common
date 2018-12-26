@@ -18,5 +18,6 @@ members = [
 	"trie-standardmap",
 	"triehash",
 	"uint",
-  "metrics",
+	"metrics-backends",
+	"metrics-backends/procedural",
 ]

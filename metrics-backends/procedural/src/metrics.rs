@@ -16,7 +16,6 @@ use proc_macro2::TokenStream as TokenStream2;
 };*/
  //  ([$($be:ident),*], $name:ident, $action:ident: $laz:expr, $level:ident, target: $target:expr, $($arg:tt)+)
 
-
 /// Parsing usage only
 #[derive(Parse, ToTokens, Debug)]
 struct MetricsDefinition {
@@ -65,7 +64,8 @@ pub fn generate_crate_access(def_crate: &str) -> TokenStream2 {
 	if ::std::env::var("CARGO_PKG_NAME").unwrap().replace("-","_") == def_crate {
 		quote!( crate )
 	} else {
-		quote!( #def_crate )
+	  let ident = syn::Ident::new(def_crate, proc_macro2::Span::call_site());
+		quote!( #ident )
 	}.into()
 }
 

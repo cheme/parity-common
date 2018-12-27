@@ -66,16 +66,16 @@ const METRICS_DEF: [u8] = include_bytes!("./config/parity-zcash.json"); // eithe
 /// TODO some of those items does not make sense (specific should only be option delay...)
 #[derive(Clone)]
 pub struct GlobalCommonDef {
-  dest: OutputDest,
-  out_mode: OutputMode,
+  pub dest: OutputDest,
+  pub out_mode: OutputMode,
   /// delay between each write (if undefined no regular write)
   /// implies an async process
-  out_delay: OutputDelay,
+  pub out_delay: OutputDelay,
   /// write/flush on drop
-  out_onclose: bool,
+  pub out_onclose: bool,
   /// listening chanel for write manually
   /// implies an async process
-  chan_write: bool,
+  pub chan_write: bool,
   // should we use slog_async enum?
   //overflow_strategie: OverflowStrategy,
 }

@@ -25,20 +25,31 @@ pub fn modules_impl(metas: Vec<NestedMeta>, input: TokenStream) -> TokenStream {
 		"metrics-backends-tests",
 		"metrics_backends_tests",
 	).into();*/
-  let mut result = TokenStream::new();
 //  result.extend(scrate_decl);
 
-  metas.into_iter().fold((result, item), |(mut s, input), m| {
+  let (mut result, init_fn, input) = metas.into_iter().fold((TokenStream::new(),TokenStream2::new(), item),
+    |(mut s, mut init_fn, input), m| {
     match m {
       NestedMeta::Meta(syn::Meta::Word(m)) => {
-        s.extend(module_impl(m, &input))
+        let m_init = m.clone();
+        s.extend(module_impl(m, &input));
+        init_fn.extend(quote!{
+          #m_init::init_metrics_states(&conf);
+        });
       },
       _ => {
         panic!("TODO return error for unexpected arg");
       },
     };
-    (s, input)
-  }).0
+    (s, init_fn, input)
+  });
+  let init_fn: TokenStream = quote!{
+    pub fn init(conf: &GlobalCommonDef) {
+      #init_fn
+    }
+  }.into();
+  result.extend(init_fn);
+  result
 }
 
 
@@ -81,6 +92,9 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
 
   let result = quote!{
     pub mod #meta {
+      use #scrate::{
+        GlobalCommonDef,
+      };
       use #scrate::#meta::{
         GlobalStates,
         DEFAULT_CONF,
@@ -108,10 +122,9 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
         #scrate::once_cell::sync::OnceCell::INIT;
 
       #[cfg(feature = "std")]
-      pub fn get_metrics_states() -> &'static States {
+      pub fn init_metrics_states(conf: &GlobalCommonDef) -> &'static States {
     //    STATE.get_or_try_init(|| {
         STATE.get_or_init(|| {
-          let conf = &DEFAULT_CONF;
           let global_state = init_states(conf);
           let derived_state = init_derived_state(&global_state);
           start_metrics(&global_state, conf.clone())
@@ -125,6 +138,13 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
     //      Ok(st)
         })
       }
+
+      #[cfg(feature = "std")]
+      pub fn get_metrics_states() -> &'static States {
+        let conf = &DEFAULT_CONF;
+        init_metrics_states(conf)
+      }
+
       #[cfg(feature = "std")]
       impl Drop for States {
         fn drop(&mut self) {

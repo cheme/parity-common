@@ -21,16 +21,16 @@ struct MetricStates {
 #[macro_export]
 macro_rules! mets {
   (fast_only, $($exp:tt)*) => {
-    metrics_backends::metrics_derive::metrics!(from_crate(metrics_backends_tests) [pro], $($exp)*)
+    $crate::metrics_backends::metrics_derive::metrics!(from_crate(metrics_backends_tests) [pro], $($exp)*)
 	};
   ($($exp:tt)*) => {
-    metrics_backends::metrics_derive::metrics!(from_crate(metrics_backends_tests) [pro, slogger], $($exp)*)
+    $crate::metrics_backends::metrics_derive::metrics!(from_crate(metrics_backends_tests) [pro, slogger], $($exp)*)
   };
 }
 
 
 
-//#[cfg(test)]
+#[cfg(test)]
 mod test {
   use super::{
     Counter,

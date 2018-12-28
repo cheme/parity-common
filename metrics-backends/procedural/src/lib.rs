@@ -122,6 +122,19 @@ pub fn timer_enclose(attr: TokenStream, input: TokenStream) -> TokenStream {
   } = parse_macro_input!(input as syn::ItemFn);
 
   let start = quote!{
+    let mut __start_timer = std::time::Instant::now();
+    let mut r = move ||
+  };
+  let end = quote!{
+    ;
+    let end_timer = std::time::Instant::now();
+    let duration = end_timer.duration_since(__start_timer);
+    let r = r();
+    #macro_backends!(#m_name, add(duration));
+    r
+  };
+
+/* let start = quote!{
     #macro_backends!(#m_name, start());
     let mut r = move ||
   };
@@ -130,7 +143,7 @@ pub fn timer_enclose(attr: TokenStream, input: TokenStream) -> TokenStream {
     let r = r();
     #macro_backends!(#m_name, suspend());
     r
-  };
+  };*/
   let mut tokens = proc_macro2::TokenStream::new();
   // logic from ToTokens impl of ItemFn in syn crate 0.15.23
   tokens.append_all(attrs.iter().filter(is_outer));

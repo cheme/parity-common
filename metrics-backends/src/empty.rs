@@ -27,6 +27,7 @@ impl Counter {
 }
 
 pub mod emptytimers {
+  use super::Duration;
 
   #[derive(Clone)]
   pub struct Timer;
@@ -41,6 +42,9 @@ pub mod emptytimers {
     }
 
     pub fn suspend(&self) {
+    }
+
+    pub fn add(&self, dur: Duration) {
     }
   }
 }

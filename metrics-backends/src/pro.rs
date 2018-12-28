@@ -18,10 +18,7 @@ use prometheus::{
   Encoder,
 };
 use std::str::FromStr;
-#[cfg(feature = "std")]
-use std::time::Duration;
-#[cfg(not(feature = "std"))]
-use core::time::Duration;
+use super::Duration;
 const DEFAULT_FILE_OUTPUT: &'static str = "./test_metrics";
 pub const DEFAULT_CONF: super::GlobalCommonDef = super::GlobalCommonDef {
   dest: super::OutputDest::File(None),
@@ -111,16 +108,24 @@ impl Timer {
     state
   }
 
+  /// TODO remove in favor of stack allocated?
+  /// could be used in non stack permited context
   pub fn start(&self) {
     let mut state = self.0.write();
     state.assert_tick_start();
 //    state.tick()
   }
 
+  /// TODO remove in favor of stack allocated?
   pub fn suspend(&self) {
     let mut state = self.0.write();
     state.assert_tick_stop();
 //    state.tick();
+  }
+
+  pub fn add(&self, dur: Duration) {
+    let mut state = self.0.write();
+    state.duration += dur;
   }
 }
 

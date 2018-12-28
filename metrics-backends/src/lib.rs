@@ -31,6 +31,11 @@ extern crate slog;
 #[macro_use]
 extern crate failure;
 
+#[cfg(feature = "std")]
+pub use std::time::Duration;
+#[cfg(not(feature = "std"))]
+pub use core::time::Duration;
+
 #[cfg(std)]
 pub type Error = failure::Error;
 
@@ -95,7 +100,7 @@ pub enum OutputDest {
 #[derive(Clone)]
 pub enum OutputDelay {
   Synch,
-  Periodic(std::time::Duration),
+  Periodic(Duration),
   Unlimited,
 }
 #[derive(Clone)]
@@ -207,6 +212,11 @@ pub struct Counter {}
 /// is not set this is a noops.
 pub struct Timer {}
 
+
+#[cfg(not(feature = "std"))]
+#[derive(Clone, Debug)]
+pub struct TimerStart;
+
 #[cfg(feature = "std")]
 #[derive(Clone, Debug)]
 //#[derive(Copy)]
@@ -218,7 +228,7 @@ pub struct Timer {}
 /// TODO atomic state instead.
 pub struct TimerState {
   pub last_start: Option<std::time::Instant>,
-  pub duration: std::time::Duration,
+  pub duration: Duration,
   // unsound rec call support only for single thread
   // TODO swith to stack allocated local state
   pub depth: usize,
@@ -230,12 +240,12 @@ impl TimerState {
   pub fn new() -> Self {
     TimerState {
       last_start: None,
-      duration: std::time::Duration::new(0, 0),
+      duration: Duration::new(0, 0),
       depth: 0,
     }
   }
 
-  pub fn from_dur(duration: std::time::Duration) -> Self {
+  pub fn from_dur(duration: Duration) -> Self {
     TimerState {
       last_start: None,
       duration,

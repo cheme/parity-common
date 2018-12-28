@@ -49,6 +49,11 @@ impl Timer {
   pub fn suspend(&self) {
     slog_info!(&(self.1).0, "timer stop"; self.0 => format!("{:?}", std::time::Instant::now()));
   }
+
+  pub fn add(&self, dur: Duration) {
+    slog_info!(&(self.1).0, "timer duration"; self.0 => format!("{:?}", dur));
+  }
+
 }
 
 

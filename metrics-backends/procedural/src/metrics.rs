@@ -80,7 +80,7 @@ pub fn metrics_impl(input: TokenStream) -> TokenStream {
     ..
   } = def;
 	let hidden_crate_name = hidden_crate.map(|rc| rc.ident.content).map(|i| i.to_string())
-		.unwrap_or_else(|| "metrics-backend".to_string());
+		.unwrap_or_else(|| "metrics_backends".to_string());
 /*	let scrate_decl = generate_hidden_includes(
 		&"mbackend",
 		"metrics-backends",

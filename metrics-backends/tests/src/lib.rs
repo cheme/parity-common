@@ -29,10 +29,43 @@ macro_rules! mets {
   };
 }
 
-
+#[macro_export]
+macro_rules! timer_enclose_backends {
+  ($($exp:tt)*) => {
+    $crate::metrics_backends::metrics_derive::metrics!(from_crate(metrics_backends_tests) [pro], $($exp)*)
+  };
+}
+#[macro_export]
+macro_rules! timer_enclose_backends_alt {
+  ($($exp:tt)*) => {
+    $crate::metrics_backends::metrics_derive::metrics!(from_crate(metrics_backends_tests) [pro, slogger], $($exp)*)
+  };
+}
 
 #[cfg(test)]
 mod test {
+  use metrics_backends::metrics_derive::{
+    timer_enclose,
+    metrics,
+  };
+
+
+  #[timer_enclose(a_timer_counter)]
+  fn to_time() -> usize {
+    // some content
+    let mut a = 5;
+    a += 1;
+    a
+  }
+
+  #[timer_enclose(a_timer_counter, timer_enclose_backends_alt)]
+  fn to_time_alt() -> usize {
+    // some content
+    let mut a = 5;
+    a += 2;
+    a
+  }
+
   use super::{
     Counter,
   };
@@ -45,8 +78,10 @@ mod test {
   fn test_timers() {
     mets!(a_timer_counter, start());
     mets!(a_timer_counter, suspend());
-//    mets!(a_timer_counter, start());
-//    mets!(a_timer_counter, suspend());
+    let a = to_time();
+    assert_eq!(a, 6);
+    let a = to_time_alt();
+    assert_eq!(a, 7);
   }
 
 }

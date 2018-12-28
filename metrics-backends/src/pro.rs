@@ -112,14 +112,18 @@ impl Timer {
   /// could be used in non stack permited context
   pub fn start(&self) {
     let mut state = self.0.write();
-    state.assert_tick_start();
+    // after acquiring lock
+    let now = std::time::Instant::now();
+    state.assert_tick_start(now);
 //    state.tick()
   }
 
   /// TODO remove in favor of stack allocated?
   pub fn suspend(&self) {
+    // befor acquiring lock
+    let now = std::time::Instant::now();
     let mut state = self.0.write();
-    state.assert_tick_stop();
+    state.assert_tick_stop(now);
 //    state.tick();
   }
 

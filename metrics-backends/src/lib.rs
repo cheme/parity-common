@@ -255,8 +255,7 @@ impl TimerState {
 
 
   /// tick measure stop if running or start if not running.
-  pub fn tick(&mut self) {
-    let now = std::time::Instant::now();
+  pub fn tick(&mut self, now: std::time::Instant) {
     if self.last_start.is_some() {
       let ld = std::mem::replace(&mut self.last_start, None);
       let ld = ld.expect("Tested above; qed");
@@ -268,38 +267,26 @@ impl TimerState {
 
   /// tick measure stop if running or start if not running.
   /// tick with state assertion for debugging.
-  pub fn assert_tick_start(&mut self) {
+  pub fn assert_tick_start(&mut self, now: std::time::Instant) {
     //assert!(self.last_start.is_none());
     if self.last_start.is_none() {
-      self.tick();
+      self.tick(now);
     } else {
-      println!("d +1");
       self.depth += 1;
     }
   }
 
   /// tick measure stop if running or start if not running.
   /// tick with state assertion for debugging.
-  pub fn assert_tick_stop(&mut self) {
+  pub fn assert_tick_stop(&mut self, now: std::time::Instant) {
     assert!(self.last_start.is_some());
     if self.depth > 0 {
-      println!("d -1");
       self.depth -= 1;
     } else {
-      self.tick();
+      self.tick(now);
     }
   }
 
-  pub fn measure(&self, now: std::time::Instant) -> std::time::Duration {
-    match self.last_start {
-      Some(ref ld) => {
-        self.duration + now.duration_since(*ld)
-      },
-      None => {
-        self.duration
-      }
-    }
-  }
 }
 
 

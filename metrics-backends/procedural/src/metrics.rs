@@ -107,8 +107,7 @@ pub fn metrics_impl(input: TokenStream) -> TokenStream {
     let action_name = &action.name; 
     let params = &action.params; 
     let call = quote!{
-      let ds = #scrate::#be::get_metrics_states().derived_state.#name.#action_name#params;
-      //#scrate::#be::#action_name::#name#params;
+      let __ds = #scrate::#be::get_metrics_states().derived_state.#name.#action_name#params;
     };
     st.extend(call);
     st

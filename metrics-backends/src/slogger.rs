@@ -1,5 +1,6 @@
 
 //! SLog backend (async write to log with basic structure)
+//! Run stateless (TODO probably change that : this is focused on aggregation by external tool)
 
 
 extern crate slog_json;
@@ -19,18 +20,37 @@ pub const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
 #[derive(Clone)]
 pub struct Counter(&'static str, GlobalStates);
 
+#[derive(Clone)]
+pub struct Timer(&'static str, GlobalStates);
+
+
 impl Counter {
   pub fn init(name: &'static str, gl: &GlobalStates) -> Self {
     Counter(name, gl.clone())
   }
   pub fn inc(&self) {
-    slog_info!(&(self.1).0, "counter"; "a_int_counter" => "1");
+    slog_info!(&(self.1).0, "counter"; self.0 => "1");
   }
   pub fn by(&self, nb: i64) {
-    slog_info!(&(self.1).0, "counter"; "a_int_counter" => nb);
+    slog_info!(&(self.1).0, "counter"; self.0 => nb);
   }
 
 }
+
+impl Timer {
+  pub fn init(name: &'static str, gl: &GlobalStates) -> Self {
+    Timer(name, gl.clone())
+  }
+
+  pub fn start(&self) {
+    slog_info!(&(self.1).0, "timer start"; self.0 => format!("{:?}", std::time::Instant::now()));
+  }
+
+  pub fn suspend(&self) {
+    slog_info!(&(self.1).0, "timer stop"; self.0 => format!("{:?}", std::time::Instant::now()));
+  }
+}
+
 
 
 #[derive(Clone)]

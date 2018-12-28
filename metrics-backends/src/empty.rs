@@ -11,6 +11,8 @@ pub const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
   chan_write: false,
 };
 
+pub use self::emptytimers::*;
+
 #[derive(Clone)]
 pub struct Counter;
 
@@ -24,6 +26,24 @@ impl Counter {
   }
 }
 
+pub mod emptytimers {
+
+  #[derive(Clone)]
+  pub struct Timer;
+
+
+  impl Timer {
+    pub fn init<GS>(name: &'static str, _gl: &GS) -> Self {
+      Timer
+    }
+
+    pub fn start(&self) {
+    }
+
+    pub fn suspend(&self) {
+    }
+  }
+}
 
 #[derive(Clone)]
 pub struct GlobalStates;

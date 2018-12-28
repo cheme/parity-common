@@ -16,6 +16,7 @@ pub use metrics_backends::metrics_derive::{
 #[metrics_modules(pro,slogger)]
 struct MetricStates {
   a_int_counter: Counter,
+  a_timer_counter: Timer,
 }
 
 #[macro_export]
@@ -40,4 +41,12 @@ mod test {
     mets!(fast_only, a_int_counter, by(1), warn, target "anything", "some additional logs {}", 123);
     mets!(a_int_counter, inc());
   }
+  #[test]
+  fn test_timers() {
+    mets!(a_timer_counter, start());
+    mets!(a_timer_counter, suspend());
+//    mets!(a_timer_counter, start());
+//    mets!(a_timer_counter, suspend());
+  }
+
 }

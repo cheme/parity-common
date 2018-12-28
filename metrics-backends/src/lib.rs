@@ -201,3 +201,80 @@ pub mod slogger;
 
 /// Define an integer counter
 pub struct Counter {}
+
+/// Define an timer counter
+/// Note that if feature `enable_timer`
+/// is not set this is a noops.
+pub struct Timer {}
+
+#[cfg(feature = "std")]
+#[derive(Clone, Debug)]
+//#[derive(Copy)]
+/// timer state to metter duration between
+/// tagger metrics.
+/// For no_std we need to plug an instrinsec
+/// to get clock (for instance expose a cffi 
+/// on i128 instant).
+/// TODO atomic state instead.
+pub struct TimerState {
+  pub last_start: Option<std::time::Instant>,
+  pub duration: std::time::Duration,
+}
+
+#[cfg(feature = "std")]
+impl TimerState {
+  /// stopped on instantiation
+  pub fn new() -> Self {
+    TimerState {
+      last_start: None,
+      duration: std::time::Duration::new(0, 0),
+    }
+  }
+
+  pub fn from_dur(duration: std::time::Duration) -> Self {
+    TimerState {
+      last_start: None,
+      duration,
+    }
+  }
+
+
+  /// tick measure stop if running or start if not running.
+  pub fn tick(&mut self) {
+    let now = std::time::Instant::now();
+    if self.last_start.is_some() {
+      let ld = std::mem::replace(&mut self.last_start, None);
+      let ld = ld.expect("Tested above; qed");
+      self.duration = self.duration + now.duration_since(ld);
+    } else {
+      self.last_start = Some(now);
+    }
+  }
+
+  /// tick measure stop if running or start if not running.
+  /// tick with state assertion for debugging.
+  pub fn assert_tick_start(&mut self) {
+    assert!(self.last_start.is_none());
+    self.tick();
+  }
+
+  /// tick measure stop if running or start if not running.
+  /// tick with state assertion for debugging.
+  pub fn assert_tick_stop(&mut self) {
+    assert!(self.last_start.is_some());
+    self.tick();
+  }
+
+  pub fn measure(&self, now: std::time::Instant) -> std::time::Duration {
+    match self.last_start {
+      Some(ref ld) => {
+        self.duration + now.duration_since(*ld)
+      },
+      None => {
+        self.duration
+      }
+    }
+  }
+}
+
+

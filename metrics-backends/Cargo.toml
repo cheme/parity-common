@@ -18,7 +18,8 @@ slog-async = { version = "^2", optional = true }
 metrics-procedural = { path = "./procedural" }
 
 [features]
-default = ["std", "pro", "slogger"]
+default = ["std", "pro", "slogger", "enable_timer"]
 std = ["once_cell"]
 pro = ["prometheus", "parking_lot"]
 slogger = ["slog", "slog-json", "slog-async"]
+enable_timer = []

@@ -1,9 +1,5 @@
 //! Initiate metrics modules from a template struct
 
-
-
-
-
 use srml_support_procedural_tools::syn_ext as ext;
 
 use syn::Ident;

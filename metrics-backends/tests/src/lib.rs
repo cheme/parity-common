@@ -9,9 +9,7 @@ extern crate metrics_backends;
 
 
 pub use metrics_backends::*;
-pub use metrics_backends::metrics_derive::{
-  metrics_modules,
-};
+pub use metrics_backends::metrics_derive::*;
 
 #[metrics_modules(pro,slogger)]
 struct MetricStates {

@@ -23,8 +23,8 @@ pub fn modules_impl(metas: Vec<NestedMeta>, input: TokenStream) -> TokenStream {
 	).into();*/
 //  result.extend(scrate_decl);
 
-  let (mut result, init_fn, input) = metas.into_iter().fold((TokenStream::new(),TokenStream2::new(), item),
-    |(mut s, mut init_fn, input), m| {
+  let (mut result, init_fn, flush_fn, input) = metas.into_iter().fold((TokenStream::new(), TokenStream2::new(), TokenStream2::new(), item),
+    |(mut s, mut init_fn, mut flush_fn, input), m| {
     match m {
       NestedMeta::Meta(syn::Meta::Word(m)) => {
         let m_init = m.clone();
@@ -32,16 +32,23 @@ pub fn modules_impl(metas: Vec<NestedMeta>, input: TokenStream) -> TokenStream {
         init_fn.extend(quote!{
           #m_init::init_metrics_states(&conf);
         });
+        flush_fn.extend(quote!{
+          #m_init::flush_metrics_states();
+        });
       },
       _ => {
         panic!("TODO return error for unexpected arg");
       },
     };
-    (s, init_fn, input)
+    (s, init_fn, flush_fn, input)
   });
   let init_fn: TokenStream = quote!{
     pub fn init(conf: &GlobalCommonDef) {
       #init_fn
+      #flush_fn
+    }
+    pub fn flush() {
+      #flush_fn
     }
   }.into();
   result.extend(init_fn);
@@ -141,12 +148,18 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
         init_metrics_states(conf)
       }
 
+      /// TODO not called need to find another way to write on exit
       #[cfg(feature = "std")]
       impl Drop for States {
         fn drop(&mut self) {
           // TODO if right mode (no need to gate that behind macro)
           async_write(&get_metrics_states().global_state)
         }
+      }
+
+      #[cfg(feature = "std")]
+      pub fn flush_metrics_states() {
+        async_write(&get_metrics_states().global_state);
       }
     }
   };

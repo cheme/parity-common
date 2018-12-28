@@ -123,10 +123,11 @@ pub fn timer_enclose(attr: TokenStream, input: TokenStream) -> TokenStream {
 
   let start = quote!{
     #macro_backends!(#m_name, start());
-    let r = 
+    let mut r = move ||
   };
   let end = quote!{
     ;
+    let r = r();
     #macro_backends!(#m_name, suspend());
     r
   };

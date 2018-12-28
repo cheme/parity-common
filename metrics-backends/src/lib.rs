@@ -219,6 +219,9 @@ pub struct Timer {}
 pub struct TimerState {
   pub last_start: Option<std::time::Instant>,
   pub duration: std::time::Duration,
+  // unsound rec call support only for single thread
+  // TODO swith to stack allocated local state
+  pub depth: usize,
 }
 
 #[cfg(feature = "std")]
@@ -228,6 +231,7 @@ impl TimerState {
     TimerState {
       last_start: None,
       duration: std::time::Duration::new(0, 0),
+      depth: 0,
     }
   }
 
@@ -235,6 +239,7 @@ impl TimerState {
     TimerState {
       last_start: None,
       duration,
+      depth: 0,
     }
   }
 
@@ -254,15 +259,25 @@ impl TimerState {
   /// tick measure stop if running or start if not running.
   /// tick with state assertion for debugging.
   pub fn assert_tick_start(&mut self) {
-    assert!(self.last_start.is_none());
-    self.tick();
+    //assert!(self.last_start.is_none());
+    if self.last_start.is_none() {
+      self.tick();
+    } else {
+      println!("d +1");
+      self.depth += 1;
+    }
   }
 
   /// tick measure stop if running or start if not running.
   /// tick with state assertion for debugging.
   pub fn assert_tick_stop(&mut self) {
     assert!(self.last_start.is_some());
-    self.tick();
+    if self.depth > 0 {
+      println!("d -1");
+      self.depth -= 1;
+    } else {
+      self.tick();
+    }
   }
 
   pub fn measure(&self, now: std::time::Instant) -> std::time::Duration {

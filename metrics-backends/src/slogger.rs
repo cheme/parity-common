@@ -74,11 +74,11 @@ pub fn init_states(config: &super::GlobalCommonDef) -> GlobalStates {
   GlobalStates(log)
 }
 
-impl Drop for GlobalStates {
+/*impl Drop for GlobalStates {
   fn drop(&mut self) {
     std::io::stderr().flush();
   }
-}
+}*/
 
 pub fn start_metrics(state: &GlobalStates, conf: super::GlobalCommonDef) -> Result<(), Error> {
   Ok(())

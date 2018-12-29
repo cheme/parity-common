@@ -47,13 +47,21 @@ mod test {
     metrics,
   };
 
+  #[inline]
+  fn fibonacci(n: usize) -> usize {
+    match n {
+      0     => panic!("zero is not a right argument to fibonacci_reccursive()!"),
+		  1 | 2 => 1,
+      3 => 2,
+      _ => fibonacci(n - 1) + fibonacci(n - 2),
+    }
+  }
+
 
   #[timer_enclose(a_timer_counter)]
   fn to_time() -> usize {
-    // some content
-    let mut a = 5;
-    a += 1;
-    a
+    //fibonacci(10)
+    fibonacci(50)
   }
 
   #[timer_enclose(a_timer_counter, timer_enclose_backends_alt)]
@@ -77,9 +85,11 @@ mod test {
     mets!(a_timer_counter, start());
     mets!(a_timer_counter, suspend());
     let a = to_time();
-    assert_eq!(a, 6);
+    assert!(a > 5);
     let a = to_time_alt();
     assert_eq!(a, 7);
+    super::flush();
+    std::thread::sleep_ms(100);
   }
 
 }

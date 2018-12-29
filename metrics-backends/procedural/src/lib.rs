@@ -127,8 +127,7 @@ pub fn timer_enclose(attr: TokenStream, input: TokenStream) -> TokenStream {
   };
   let end = quote!{
     ;
-    let end_timer = std::time::Instant::now();
-    let duration = end_timer.duration_since(__start_timer);
+    let duration = __start_timer.elapsed();
     let r = r();
     #macro_backends!(#m_name, add(duration));
     r

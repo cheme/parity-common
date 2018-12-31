@@ -123,12 +123,15 @@ pub fn timer_enclose(attr: TokenStream, input: TokenStream) -> TokenStream {
 
   let start = quote!{
     let mut __start_timer = std::time::Instant::now();
+    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::Release);
     let mut r = move ||
   };
   let end = quote!{
     ;
-    let duration = __start_timer.elapsed();
+    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::Acquire);
     let r = r();
+    let duration = __start_timer.elapsed();
+    let end = std::time::Instant::now();
     #macro_backends!(#m_name, add(duration));
     r
   };

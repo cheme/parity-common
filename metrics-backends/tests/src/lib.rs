@@ -61,7 +61,9 @@ mod test {
   #[timer_enclose(a_timer_counter)]
   fn to_time() -> usize {
     //fibonacci(10)
-    fibonacci(50)
+    //fibonacci(30)
+    fibonacci(45)
+    //fibonacci(50)
   }
 
   #[timer_enclose(a_timer_counter, timer_enclose_backends_alt)]

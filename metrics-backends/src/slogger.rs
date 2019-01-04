@@ -28,33 +28,35 @@ pub struct Counter(&'static str, GlobalStates);
 pub struct Timer(&'static str, GlobalStates);
 
 
-impl Counter {
-  pub fn init(name: &'static str, gl: &GlobalStates) -> Result<Self, Error> {
+impl super::Counter for Counter {
+  type GlobalStates = GlobalStates;
+  fn init(name: &'static str, gl: &GlobalStates) -> Result<Self, Error> {
     Ok(Counter(name, gl.clone()))
   }
-  pub fn inc(&self) {
+  fn inc(&self) {
     slog_info!(&(self.1).0, "counter"; self.0 => "1");
   }
-  pub fn by(&self, nb: i64) {
+  fn by(&self, nb: i64) {
     slog_info!(&(self.1).0, "counter"; self.0 => nb);
   }
 
 }
 
-impl Timer {
-  pub fn init(name: &'static str, gl: &GlobalStates) -> Result<Self, Error> {
+impl super::Timer for Timer {
+  type GlobalStates = GlobalStates;
+  fn init(name: &'static str, gl: &GlobalStates) -> Result<Self, Error> {
     Ok(Timer(name, gl.clone()))
   }
 
-  pub fn start(&self) {
+  fn start(&self) {
     slog_info!(&(self.1).0, "timer start"; self.0 => format!("{:?}", std::time::Instant::now()));
   }
 
-  pub fn suspend(&self) {
+  fn suspend(&self) {
     slog_info!(&(self.1).0, "timer stop"; self.0 => format!("{:?}", std::time::Instant::now()));
   }
 
-  pub fn add(&self, dur: Duration) {
+  fn add(&self, dur: Duration) {
     slog_info!(&(self.1).0, "timer duration"; self.0 => format!("{:?}", dur));
   }
 
@@ -75,6 +77,8 @@ pub struct Slogger;
 
 impl Backend for Slogger {
   type GlobalStates = GlobalStates;
+  type Counter = Counter;
+  type Timer = Timer;
   const DEFAULT_FILE_OUTPUT: &'static str = "./logjson";
   const FILE_ID: &'static str = "slogger";
   const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {

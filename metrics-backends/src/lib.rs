@@ -49,16 +49,24 @@ pub use metrics_derive::*;
 #[macro_export]
 macro_rules! metrics {
   (from_crate($cn:ident) [$($be:ident),*], $name:ident, $action:ident$laz:tt, $level:ident, target $target:expr, $($arg:tt)+) => {
-    $(
-      let __ds = $cn::$be::get_metrics_states().derived_state.$name.$action$laz;
-    )*
-    use $cn::log::log;
-    $cn::log::$level!(target: $target, $($arg)+)
+    {
+      use $cn::Timer;
+      use $cn::Counter;
+      $(
+        let __ds = $cn::$be::get_metrics_states().derived_state.$name.$action$laz;
+      )*
+      use $cn::log::log;
+      $cn::log::$level!(target: $target, $($arg)+)
+    }
   };
   (from_crate($cn:ident) [$($be:ident),*], $name:ident, $action:ident$laz:tt) => {
-    $(
-      let __ds = $cn::$be::get_metrics_states().derived_state.$name.$action$laz;
-    )*
+    {
+      use $cn::Timer;
+      use $cn::Counter;
+      $(
+        let __ds = $cn::$be::get_metrics_states().derived_state.$name.$action$laz;
+      )*
+    }
   };
 }
 
@@ -186,12 +194,26 @@ pub mod slogger {
  
 
 /// Define an integer counter
-pub struct Counter {}
+pub trait Counter: Sized {
+  type GlobalStates;
+  fn init(name: &'static str, gl: &Self::GlobalStates) -> Result<Self, Error>;
+  fn inc(&self);
+  fn by(&self, nb: i64);
+}
 
 /// Define an timer counter
 /// Note that if feature `enable_timer`
 /// is not set this is a noops.
-pub struct Timer {}
+pub trait Timer: Sized {
+  type GlobalStates;
+  fn init(name: &'static str, gl: &Self::GlobalStates) -> Result<Self, Error>;
+
+  fn start(&self);
+
+  fn suspend(&self);
+
+  fn add(&self, dur: Duration);
+}
 
 
 #[cfg(not(feature = "std"))]
@@ -271,6 +293,8 @@ impl TimerState {
 
 pub trait Backend {
   type GlobalStates: 'static + Clone + Send; // TODO switch simply to sync TODO check if use elsewhere
+  type Counter: Counter;
+  type Timer: Timer;
   const FILE_ID: &'static str;
   const DEFAULT_CONF: GlobalCommonDef;
   const DEFAULT_FILE_OUTPUT: &'static str;

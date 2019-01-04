@@ -8,13 +8,14 @@ pub use self::emptytimers::*;
 #[derive(Clone)]
 pub struct Counter;
 
-impl Counter {
-  pub fn init(name: &'static str, gl: &GlobalStates) -> Result<Self, Error> {
+impl super::Counter for Counter {
+  type GlobalStates = GlobalStates;
+  fn init(_name: &'static str, _gl: &GlobalStates) -> Result<Self, Error> {
     Ok(Counter)
   }
-  pub fn inc(&self) {
+  fn inc(&self) {
   }
-  pub fn by(&self, _nb: i64) {
+  fn by(&self, _nb: i64) {
   }
 }
 
@@ -26,18 +27,19 @@ pub mod emptytimers {
   pub struct Timer;
 
 
-  impl Timer {
-    pub fn init<GS>(name: &'static str, _gl: &GS) -> Result<Self, Error> {
+  impl ::Timer for Timer {
+    type GlobalStates = super::GlobalStates;
+    fn init(_name: &'static str, _gl: &Self::GlobalStates) -> Result<Self, Error> {
       Ok(Timer)
     }
 
-    pub fn start(&self) {
+    fn start(&self) {
     }
 
-    pub fn suspend(&self) {
+    fn suspend(&self) {
     }
 
-    pub fn add(&self, dur: Duration) {
+    fn add(&self, _dur: Duration) {
     }
   }
 }
@@ -49,6 +51,8 @@ pub struct Empty;
 
 impl Backend for Empty {
   type GlobalStates = GlobalStates;
+  type Counter = Counter;
+  type Timer = emptytimers::Timer;
   const DEFAULT_FILE_OUTPUT: &'static str = "./dummy"; // never written
   const FILE_ID: &'static str = "empty";
   const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {

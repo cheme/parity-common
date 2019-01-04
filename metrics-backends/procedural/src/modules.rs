@@ -112,6 +112,8 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
         GlobalCommonDef,
         Backend,
         Error,
+        Counter,
+        Timer,
       };
       use #scrate::#meta::#meta_struct;
       #[derive(Clone)]
@@ -123,6 +125,7 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
         pub global_state: <#meta_struct as Backend>::GlobalStates,
         pub derived_state: DerivedStates,
       }
+
       fn init_derived_state(global_state: &<#meta_struct as Backend>::GlobalStates) -> Result<DerivedStates, Error> {
         Ok(DerivedStates {
           #init_fields

@@ -41,6 +41,8 @@ pub struct Pro;
 
 impl Backend for Pro {
   type GlobalStates = GlobalStates;
+  type Counter = Counter;
+  type Timer = Timer;
   const DEFAULT_FILE_OUTPUT: &'static str = "./test_metrics";
   const FILE_ID: &'static str = "pro";
   const DEFAULT_CONF: GlobalCommonDef = GlobalCommonDef {
@@ -117,25 +119,27 @@ pub struct GlobalStates {
   pub timers: std::sync::Arc<RwLock<Vec<(IntGauge, IntGauge, Timer)>>>,
 }
 
-impl Counter {
-  pub fn init(name: &str, gl: &GlobalStates) -> Result<Self, Error> {
+impl super::Counter for Counter {
+  type GlobalStates = GlobalStates;
+  fn init(name: &str, gl: &GlobalStates) -> Result<Self, Error> {
     let a_counter = IntCounter::with_opts(Opts::new(name, "help..."))?;
     gl.registry.register(Box::new(a_counter.clone()))?;
     Ok(Counter(a_counter))
   }
 
-  pub fn inc(&self) {
+  fn inc(&self) {
     self.0.inc();
   }
 
-  pub fn by(&self, nb: i64) {
+  fn by(&self, nb: i64) {
     self.0.inc_by(nb);
   }
 }
 
 #[cfg(feature = "enable_timer")]
-impl Timer {
-  pub fn init(name: &str, gl: &GlobalStates) -> Result<Self, Error> {
+impl super::Timer for Timer {
+  type GlobalStates = GlobalStates;
+  fn init(name: &str, gl: &GlobalStates) -> Result<Self, Error> {
     let secs_counter = IntGauge::with_opts(Opts::new(name, "secs"))?;
     let nanos_counter = IntGauge::with_opts(Opts::new(name.to_string() + "_n", "nanos".to_string()))?;
     gl.registry.register(Box::new(secs_counter.clone()))?;
@@ -148,7 +152,7 @@ impl Timer {
 
   /// TODO remove in favor of stack allocated?
   /// could be used in non stack permited context
-  pub fn start(&self) {
+  fn start(&self) {
     let mut state = self.0.write();
     // after acquiring lock
     let now = std::time::Instant::now();
@@ -157,7 +161,7 @@ impl Timer {
   }
 
   /// TODO remove in favor of stack allocated?
-  pub fn suspend(&self) {
+  fn suspend(&self) {
     // befor acquiring lock
     let now = std::time::Instant::now();
     let mut state = self.0.write();
@@ -165,7 +169,7 @@ impl Timer {
 //    state.tick();
   }
 
-  pub fn add(&self, dur: Duration) {
+  fn add(&self, dur: Duration) {
     let mut state = self.0.write();
     state.duration += dur;
   }

@@ -18,7 +18,6 @@
 //! Single backend prometheus, but still a plugoff feature (here using `std` as activation feature)
 //! The poc allows only one action per logging but target is multiple possible actions.
 
-#![feature(proc_macro_hygiene)]
 #![cfg_attr(not(feature = "std"), no_std)]
 //#![cfg_attr(not(feature = "std"), feature(core_intrinsics))]
 //#![cfg_attr(not(feature = "std"), feature(alloc))]
@@ -36,11 +35,11 @@ pub use std::time::Duration;
 #[cfg(not(feature = "std"))]
 pub use core::time::Duration;
 
-#[cfg(std)]
+#[cfg(feature = "std")]
 pub type Error = failure::Error;
 
-#[cfg(not(std))]
-pub type Error = ();
+#[cfg(not(feature = "std"))]
+pub type Error = (); // TODO switch to dummy error with required conversions
 
 
 #[macro_use]
@@ -71,34 +70,16 @@ pub enum MetricsError {
   AnError{ label: String },
 }
 
-/// METRICS_DEF is byte content to define the metrics configuration
-/// format is json as sample but undefined at this point.
-/// The point is that we want direct pointer to things to store (no key value mapping for
-/// instance), so initializing it at compilation from a conf seems to be an idea.
-/// Note that it will need a procedural macro to do it, but it 
-#[cfg(feature = "conf_proj1")]
-const METRICS_DEF: [u8] = include_bytes!("./config/parity-ethereum.json"); // either json
-#[cfg(feature = "conf_proj2")]
-const METRICS_DEF: [u8] = include_bytes!("./config/parity-zcash.json"); // either json
-
-
 /// drafting some spec
 /// Those could be set from command line or ext file not at compile time
+/// Those conf are dynamic confs that can be feed at any time (eg through command parameter)
 /// TODO some of those items does not make sense (specific should only be option delay...)
 #[derive(Clone)]
 pub struct GlobalCommonDef {
   pub dest: OutputDest,
-  pub out_mode: OutputMode,
   /// delay between each write (if undefined no regular write)
   /// implies an async process
   pub out_delay: OutputDelay,
-  /// write/flush on drop
-  pub out_onclose: bool,
-  /// listening chanel for write manually
-  /// implies an async process
-  pub chan_write: bool,
-  // should we use slog_async enum?
-  //overflow_strategie: OverflowStrategy,
 }
 
 /// static outdesc, resulting object will simply be `impl Write`
@@ -107,10 +88,8 @@ pub enum OutputDest {
   File(Option<std::path::PathBuf>), // if None use pathbuf from constant str
   /// use the log macro to push content
   Logger,
-  /// substrate telemetry crate to push on ws ?
+  /// TODO substrate telemetry crate to push on ws ?
   Telemetry,
-  /// probably not a good idea (Trait)
-  Custo(String),
 }
 
 #[derive(Clone)]
@@ -118,15 +97,6 @@ pub enum OutputDelay {
   Synch,
   Periodic(Duration),
   Unlimited,
-}
-#[derive(Clone)]
-pub enum OutputMode {
-  /// append content to existing content
-  Append,
-  /// append but delete existing content on init
-  AppendNew,
-  /// overwrite on each periodic or called write operation
-  Overwrite,
 }
 
 #[macro_use]
@@ -197,28 +167,23 @@ pub mod slogger;
 #[path = "empty.rs"]
 pub mod slogger;
  
-/// this module should be genereated by METRICS_DEF by a simple proc_macro
-/// (adding some named ref counter to the struct and other variants).
-/// That way the configuration do not need to be directly in the crate but 
-/// in any metrics project specific linked crate.
-/// TODO not that good idea writing it directly is probably simplier.
-/// still proc_macro could do quick recompile without changing code base.
-/// Idea of having a proc_macro fetching the CONF??
-/// -> not sure that it is doable (I could understand that being blocked).
 #[cfg(feature = "std")]
 #[cfg(feature = "pro")]
 pub mod pro;
 #[cfg(not(all(feature = "std",feature = "pro")))]
-#[path = "empty.rs"]
-pub mod pro;
+pub mod pro {
+  pub use super::empty::Empty as Pro;
+}
  
 pub mod empty;
 
 
 #[cfg(not(all(feature = "std",feature = "slogger")))]
 #[path = "empty.rs"]
-pub mod slogger;
-
+pub mod slogger {
+  pub use super::empty::Empty as Slogger;
+}
+ 
 
 /// Define an integer counter
 pub struct Counter {}
@@ -241,7 +206,6 @@ pub struct TimerStart;
 /// For no_std we need to plug an instrinsec
 /// to get clock (for instance expose a cffi 
 /// on i128 instant).
-/// TODO atomic state instead.
 pub struct TimerState {
   pub last_start: Option<std::time::Instant>,
   pub duration: Duration,
@@ -305,4 +269,35 @@ impl TimerState {
 
 }
 
+pub trait Backend {
+  type GlobalStates: 'static + Clone + Send; // TODO switch simply to sync TODO check if use elsewhere
+  const FILE_ID: &'static str;
+  const DEFAULT_CONF: GlobalCommonDef;
+  const DEFAULT_FILE_OUTPUT: &'static str;
+  fn async_write(&Self::GlobalStates) -> Result<(), Error>;
 
+  fn start_metrics(state: &Self::GlobalStates, conf: GlobalCommonDef) -> Result<(), Error>;
+
+  /// utility to start delay processs
+  fn start_delay_write(state: &Self::GlobalStates, conf: GlobalCommonDef) -> Result<(), Error> {
+    if let OutputDelay::Periodic(dur) = conf.out_delay {
+      let state_th = state.clone();
+      std::thread::spawn(move || {
+
+        let state = state_th;
+          loop {
+            std::thread::sleep(dur);
+            Self::async_write(&state).unwrap(); // TODO manage panic on write
+          }
+      });
+    }
+    Ok(())
+  }
+
+  fn init_states(config: &GlobalCommonDef) -> Result<Self::GlobalStates, Error>;
+
+  #[cfg(feature = "std")]
+  fn unwrap_file_path(opath: &Option<std::path::PathBuf>) -> std::path::PathBuf {
+    opath.clone().unwrap_or_else(||std::path::PathBuf::from(Self::DEFAULT_FILE_OUTPUT.to_string() + "_" + Self::FILE_ID))
+  }
+}

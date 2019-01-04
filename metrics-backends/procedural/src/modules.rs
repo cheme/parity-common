@@ -14,6 +14,16 @@ use srml_support_procedural_tools::{
 
 use syn::NestedMeta;
 
+fn struct_name(module: String) -> syn::Ident {
+  let mut c = module.chars();
+  let s_name = match c.next() {
+    None => String::new(),
+    Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+  };
+
+	syn::Ident::new(&s_name, proc_macro2::Span::call_site())
+}
+
 pub fn modules_impl(metas: Vec<NestedMeta>, input: TokenStream) -> TokenStream {
 	let item = parse_macro_input!(input as syn::ItemStruct);
 /*  let scrate_decl: TokenStream = generate_hidden_includes(
@@ -30,10 +40,10 @@ pub fn modules_impl(metas: Vec<NestedMeta>, input: TokenStream) -> TokenStream {
         let m_init = m.clone();
         s.extend(module_impl(m, &input));
         init_fn.extend(quote!{
-          #m_init::init_metrics_states(&conf);
+          #m_init::init_metrics_states(&conf)?;
         });
         flush_fn.extend(quote!{
-          #m_init::flush_metrics_states();
+          #m_init::flush_metrics_states()?;
         });
       },
       _ => {
@@ -43,12 +53,14 @@ pub fn modules_impl(metas: Vec<NestedMeta>, input: TokenStream) -> TokenStream {
     (s, init_fn, flush_fn, input)
   });
   let init_fn: TokenStream = quote!{
-    pub fn init(conf: &GlobalCommonDef) {
+    pub fn init(conf: &GlobalCommonDef) -> Result<(), Error> {
       #init_fn
       #flush_fn
+      Ok(())
     }
-    pub fn flush() {
+    pub fn flush() -> Result<(), Error> {
       #flush_fn
+      Ok(())
     }
   }.into();
   result.extend(init_fn);
@@ -63,6 +75,7 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
 		..
 	} = input;
 
+  let meta_struct = struct_name(meta.to_string());
 /*  // only named fields allowed
   let fields = if let &syn::Fields::Named(syn::FieldsNamed{ref named, ..}) = fields {
     named
@@ -70,7 +83,7 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
     panic!("TODO return error for unexpected arg");
   };*/
 
-		let scrate_decl = quote!();
+	let scrate_decl = quote!();
 
 //	let scrate = generate_crate_access(&"mbackend", "metrics-backends-tests");
 	let scrate = quote!(metrics_backends);
@@ -88,7 +101,7 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
     let name = field.ident.as_ref().expect("TODO return error for unnamed field");
     let sname = name.to_string();
     s.extend(quote! {
-      #name: #scrate::#meta::#ty::init(#sname, &global_state),
+      #name: #scrate::#meta::#ty::init(#sname, &global_state)?,
     });
     s
   });
@@ -97,27 +110,23 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
     pub mod #meta {
       use #scrate::{
         GlobalCommonDef,
+        Backend,
+        Error,
       };
-      use #scrate::#meta::{
-        GlobalStates,
-        DEFAULT_CONF,
-        init_states,
-        start_metrics,
-        async_write,
-      }; 
+      use #scrate::#meta::#meta_struct;
       #[derive(Clone)]
       pub struct DerivedStates {
         #derived_fields
       }
       #[derive(Clone)]
       pub struct States {
-        pub global_state: GlobalStates,
+        pub global_state: <#meta_struct as Backend>::GlobalStates,
         pub derived_state: DerivedStates,
       }
-      fn init_derived_state(global_state: &GlobalStates) -> DerivedStates {
-        DerivedStates {
+      fn init_derived_state(global_state: &<#meta_struct as Backend>::GlobalStates) -> Result<DerivedStates, Error> {
+        Ok(DerivedStates {
           #init_fields
-        }
+        })
       }
 
       #[cfg(feature = "std")]
@@ -125,41 +134,45 @@ pub fn module_impl(meta: syn::Ident, input: &syn::ItemStruct) -> TokenStream {
         #scrate::once_cell::sync::OnceCell::INIT;
 
       #[cfg(feature = "std")]
-      pub fn init_metrics_states(conf: &GlobalCommonDef) -> &'static States {
+      pub fn init_metrics_states(conf: &GlobalCommonDef) -> Result<States, Error> {
+        let global_state = <#meta_struct as Backend>::init_states(conf)?;
+        let derived_state = init_derived_state(&global_state)?;
+        <#meta_struct as Backend>::start_metrics(&global_state, conf.clone())?;
+        Ok(States {
+          global_state,
+          derived_state,
+        })
+      }
+
+      #[cfg(feature = "std")]
+      pub fn init_metrics_states_panic(conf: &GlobalCommonDef) -> &'static States {
     //    STATE.get_or_try_init(|| {
         STATE.get_or_init(|| {
-          let global_state = init_states(conf);
-          let derived_state = init_derived_state(&global_state);
-          start_metrics(&global_state, conf.clone())
-            .expect("Fail on metrics states initialization");
-          let st = States {
-            global_state,
-            derived_state,
-          };
-
-          st
+          match init_metrics_states(conf) {
+            Ok(st) => st,
+            Err(e) => panic!("Failed to initialize metrics backend: {}", e),
+          }
     //      Ok(st)
         })
       }
 
       #[cfg(feature = "std")]
       pub fn get_metrics_states() -> &'static States {
-        let conf = &DEFAULT_CONF;
-        init_metrics_states(conf)
+        let conf = &<#meta_struct as Backend>::DEFAULT_CONF;
+        init_metrics_states_panic(conf)
       }
 
-      /// TODO not called need to find another way to write on exit
-      #[cfg(feature = "std")]
       impl Drop for States {
         fn drop(&mut self) {
           // TODO if right mode (no need to gate that behind macro)
-          async_write(&get_metrics_states().global_state)
+          <#meta_struct as Backend>::async_write(&get_metrics_states().global_state);
         }
       }
 
       #[cfg(feature = "std")]
-      pub fn flush_metrics_states() {
-        async_write(&get_metrics_states().global_state);
+      pub fn flush_metrics_states() -> Result<(), Error> {
+        <#meta_struct as Backend>::async_write(&get_metrics_states().global_state)?;
+        Ok(())
       }
     }
   };

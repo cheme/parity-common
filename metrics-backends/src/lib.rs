@@ -45,7 +45,23 @@ pub type Error = ();
 
 #[macro_use]
 pub extern crate metrics_procedural as metrics_derive;
+pub use metrics_derive::*;
 
+#[macro_export]
+macro_rules! metrics {
+  (from_crate($cn:ident) [$($be:ident),*], $name:ident, $action:ident$laz:tt, $level:ident, target $target:expr, $($arg:tt)+) => {
+    $(
+      let __ds = $cn::$be::get_metrics_states().derived_state.$name.$action$laz;
+    )*
+    use $cn::log::log;
+    $cn::log::$level!(target: $target, $($arg)+)
+  };
+  (from_crate($cn:ident) [$($be:ident),*], $name:ident, $action:ident$laz:tt) => {
+    $(
+      let __ds = $cn::$be::get_metrics_states().derived_state.$name.$action$laz;
+    )*
+  };
+}
 
 
 // Currently unused TODO delete?

@@ -21,18 +21,20 @@ extern crate synstructure;
 
 use proc_macro::TokenStream;
 
-mod metrics;
 
 mod modules;
+mod metrics;
 
 /**
  * Main macro for declaring metrics usage.
  *
- * TODO syntax examples
+ * It requires usage of 'proc_macro_hygiene' (nightly only), thus 'metrics' macro from
+ * 'metrics-backends' should be used instead.
+ *
  *  ([$($be:ident),*], $name:ident, $action:ident: $laz:expr, $level:ident, target: $target:expr, $($arg:tt)+)
  */
 #[proc_macro]
-pub fn metrics(input: TokenStream) -> TokenStream {
+pub fn metrics_procs(input: TokenStream) -> TokenStream {
 	metrics::metrics_impl(input)
 }
 

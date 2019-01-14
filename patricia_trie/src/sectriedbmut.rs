@@ -24,6 +24,7 @@ use node_codec::NodeCodec;
 pub struct SecTrieDBMut<'db, H, C>
 where
 	H: Hasher + 'db,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	raw: TrieDBMut<'db, H, C>
@@ -32,6 +33,7 @@ where
 impl<'db, H, C> SecTrieDBMut<'db, H, C>
 where
 	H: Hasher,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	/// Create a new trie with the backing database `db` and empty `root`
@@ -58,6 +60,7 @@ where
 impl<'db, H, C> TrieMut<H, C> for SecTrieDBMut<'db, H, C>
 where
 	H: Hasher,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	fn root(&mut self) -> &H::Out {

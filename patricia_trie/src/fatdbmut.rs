@@ -25,6 +25,7 @@ use node_codec::NodeCodec;
 pub struct FatDBMut<'db, H, C>
 where
 	H: Hasher + 'db,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	raw: TrieDBMut<'db, H, C>,
@@ -33,6 +34,7 @@ where
 impl<'db, H, C> FatDBMut<'db, H, C>
 where
 	H: Hasher,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	/// Create a new trie with the backing database `db` and empty `root`
@@ -63,6 +65,7 @@ where
 impl<'db, H, C> TrieMut<H, C> for FatDBMut<'db, H, C>
 where
 	H: Hasher,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	fn root(&mut self) -> &H::Out { self.raw.root() }

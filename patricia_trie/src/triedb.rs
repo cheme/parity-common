@@ -78,6 +78,7 @@ where
 	/// Create a new trie with the backing database `db` and `root`
 	/// Returns an error if `root` does not exist
 	pub fn new(db: &'db HashDB<H, DBValue>, root: &'db H::Out) -> Result<Self, H::Out, C::Error> {
+    println!("new tdb: {:?}", root);
 		if !db.contains(root) {
 			Err(Box::new(TrieError::InvalidStateRoot(*root)))
 		} else {
@@ -131,6 +132,18 @@ where
 
 	fn iter<'a>(&'a self) -> Result<Box<TrieIterator<H, C, Item=TrieItem<H::Out, C::Error>> + 'a>, H::Out, C::Error> {
 		TrieDBIterator::new(self).map(|iter| Box::new(iter) as Box<_>)
+	}
+}
+impl<'db, H, C> TrieDB<'db, H, C>
+where
+	H: Hasher,
+	C: NodeCodec<H>
+{
+
+	pub fn iter_term<'a>(&'a self) -> Result<Box<TrieIterator<H, C, Item=TrieItem<H::Out, C::Error>> + 'a>, H::Out, C::Error> {
+		TrieDBIterator::new(self)
+      .map(|iter| TrieDBIteratorTerm(iter))
+      .map(|iter| Box::new(iter) as Box<_>)
 	}
 }
 
@@ -233,6 +246,8 @@ pub struct TrieDBIterator<'a, H: Hasher + 'a, C: NodeCodec<H> + 'a> {
 	trail: Vec<Crumb>,
 	key_nibbles: Bytes,
 }
+
+pub struct TrieDBIteratorTerm<'a, H: Hasher + 'a, C: NodeCodec<H> + 'a> (pub TrieDBIterator<'a,H,C>);
 
 impl<'a, H: Hasher, C: NodeCodec<H>> TrieDBIterator<'a, H, C> {
 	/// Create a new iterator.
@@ -338,6 +353,28 @@ impl<'a, H: Hasher, C: NodeCodec<H>> TrieDBIterator<'a, H, C> {
 		result
 	}
 }
+impl<'a, H: Hasher, C: NodeCodec<H>> TrieDBIteratorTerm<'a, H, C> {
+
+	fn seek<'key>(&mut self, node_data: &DBValue, mut key: NibbleSlice<'key>) -> Result<(), H::Out, C::Error> {
+    self.0.seek(node_data, key)
+	}
+
+	/// Descend into a payload.
+	fn descend(&mut self, d: &[u8]) -> Result<(), H::Out, C::Error> {
+    self.0.descend(d)
+	}
+
+	/// Descend into a payload.
+	fn descend_into_node(&mut self, node: OwnedNode) {
+    self.0.descend_into_node(node)
+	}
+
+	/// The present key.
+	fn key(&self) -> Bytes {
+    self.0.key()
+	}
+}
+
 
 impl<'a, H: Hasher, C: NodeCodec<H>> TrieIterator<H, C> for TrieDBIterator<'a, H, C> {
 	/// Position the iterator on the first element with key >= `key`
@@ -348,6 +385,14 @@ impl<'a, H: Hasher, C: NodeCodec<H>> TrieIterator<H, C> for TrieDBIterator<'a, H
 		self.seek(&root_rlp, NibbleSlice::new(key.as_ref()))
 	}
 }
+
+impl<'a, H: Hasher, C: NodeCodec<H>> TrieIterator<H, C> for TrieDBIteratorTerm<'a, H, C> {
+	/// Position the iterator on the first element with key >= `key`
+	fn seek(&mut self, key: &[u8]) -> Result<(), H::Out, C::Error> {
+    <TrieDBIterator<'a,H,C> as TrieIterator<H,C>>::seek(&mut self.0, key)
+	}
+}
+
 
 impl<'a, H: Hasher, C: NodeCodec<H>> Iterator for TrieDBIterator<'a, H, C> {
 	type Item = TrieItem<'a, H::Out, C::Error>;
@@ -420,6 +465,79 @@ impl<'a, H: Hasher, C: NodeCodec<H>> Iterator for TrieDBIterator<'a, H, C> {
 		}
 	}
 }
+
+impl<'a, H: Hasher, C: NodeCodec<H>> Iterator for TrieDBIteratorTerm<'a, H, C> {
+	type Item = TrieItem<'a, H::Out, C::Error>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		enum IterStep<'b, O, E> {
+			Continue,
+			PopTrail,
+			Descend(Result<Cow<'b, DBValue>, O, E>),
+		}
+		loop {
+			let iter_step = {
+				self.0.trail.last_mut()?.increment();
+				let b = self.0.trail.last().expect("trail.last_mut().is_some(); qed");
+
+				match (b.status.clone(), &b.node) {
+					(Status::Exiting, n) => {
+						match *n {
+							OwnedNode::Leaf(ref n, _) | OwnedNode::Extension(ref n, _) => {
+								let l = self.0.key_nibbles.len();
+								self.0.key_nibbles.truncate(l - n.len());
+							},
+							OwnedNode::Branch(_) => { self.0.key_nibbles.pop(); },
+							_ => {}
+						}
+						IterStep::PopTrail
+					},
+					(Status::At, &OwnedNode::Branch(ref branch)) if branch.has_value() => {
+						let value = branch.get_value().expect("already checked `has_value`");
+						return Some(Ok((self.0.key(), DBValue::from_slice(value))));
+					},
+					(Status::At, &OwnedNode::Leaf(_, ref v)) => {
+						return Some(Ok((self.0.key(), v.clone())));
+					},
+					(Status::At, &OwnedNode::Extension(_, ref d)) => {
+						IterStep::Descend::<H::Out, C::Error>(self.0.db.get_raw_or_lookup(&*d))
+					},
+					(Status::At, &OwnedNode::Branch(_)) => IterStep::Continue,
+					(Status::AtChild(i), &OwnedNode::Branch(ref branch)) if !branch[i].is_empty() => {
+						match i {
+							0 => self.0.key_nibbles.push(0),
+							i => *self.0.key_nibbles.last_mut()
+								.expect("pushed as 0; moves sequentially; removed afterwards; qed") = i as u8,
+						}
+						IterStep::Descend::<H::Out, C::Error>(self.0.db.get_raw_or_lookup(&branch[i]))
+					},
+					(Status::AtChild(i), &OwnedNode::Branch(_)) => {
+						if i == 0 {
+							self.0.key_nibbles.push(0);
+						}
+						IterStep::Continue
+					},
+					_ => panic!() // Should never see Entering or AtChild without a Branch here.
+				}
+			};
+
+			match iter_step {
+				IterStep::PopTrail => {
+					self.0.trail.pop();
+				},
+				IterStep::Descend::<H::Out, C::Error>(Ok(d)) => {
+					let node = C::decode(&d).expect("encoded data read from db; qed");
+					self.0.descend_into_node(node.into())
+				},
+				IterStep::Descend::<H::Out, C::Error>(Err(e)) => {
+					return Some(Err(e))
+				}
+				IterStep::Continue => {},
+			}
+		}
+	}
+}
+
 
 #[cfg(test)]
 mod tests {

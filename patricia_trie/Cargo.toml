@@ -7,17 +7,21 @@ repository = "https://github.com/paritytech/parity-common"
 license = "GPL-3.0"
 
 [dependencies]
+heapsize = "0.4"
 elastic-array = "0.10"
 log = "0.3"
 rand = "0.4"
-hashdb = { version = "0.3.0", path = "../hashdb" }
+hashdb = { version = "0.3.0" } #, path = "../hashdb" }
 parity-bytes = { version = "0.1", path = "../parity-bytes" }
+memorydb = { version = "0.3.0", default-features = false }
+kvdb-rocksdb = "0.1.4"
+tempdir = "0.3"
+kvdb = { version = "0.1" }#, path = "../kvdb" }
 
 [dev-dependencies]
 env_logger = "0.5"
 ethereum-types = "0.4"
 keccak-hash = { version = "0.1", path = "../keccak-hash" }
-memorydb = { version = "0.3.0", path = "../memorydb", default-features = false }
 rlp = { version = "0.3.0", path = "../rlp", default-features = false }
 trie-standardmap = { version = "0.1", path = "../trie-standardmap", default-features = false }
 triehash = { version = "0.3.0", path = "../triehash", default-features = false }

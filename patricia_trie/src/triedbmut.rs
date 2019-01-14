@@ -21,6 +21,7 @@ use super::lookup::Lookup;
 use super::node::Node as EncodedNode;
 use node_codec::NodeCodec;
 use super::{DBValue, node::NodeKey};
+use std::collections::BTreeMap;
 
 use bytes::ToPretty;
 use hashdb::{HashDB, Hasher};
@@ -31,6 +32,10 @@ use std::marker::PhantomData;
 use std::mem;
 use std::ops::Index;
 use std::{fmt::Debug, hash::Hash};
+use super::{Trie, TrieDB};
+
+use memorydb::MemoryDB;
+
 
 // For lookups into the Node storage buffer.
 // This is deliberately non-copyable.
@@ -293,6 +298,7 @@ impl<'a, H> Index<&'a StorageHandle> for NodeStorage<H> {
 pub struct TrieDBMut<'a, H, C>
 where
 	H: Hasher + 'a,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	storage: NodeStorage<H::Out>,
@@ -304,12 +310,18 @@ where
 	/// Note that none are performed until changes are committed.
 	hash_count: usize,
 	marker: PhantomData<C>, // TODO: rpheimer: "we could have the NodeCodec trait take &self to its methods and then we don't need PhantomData. we can just store an instance of C: NodeCodec in the trie struct. If it's a ZST it won't have any additional overhead anyway"
+  // unoptimize triedb content as key value only (can be init from a triedb iterator directly)
+  tree: CompactTrie,
 }
+
+
+pub type CompactTrie = BTreeMap<Vec<u8>, DBValue>;
 
 impl<'a, H, C> TrieDBMut<'a, H, C>
 where
 	H: Hasher,
-	C: NodeCodec<H>
+	C: NodeCodec<H>,
+  H::Out: heapsize::HeapSizeOf + AsRef<[u8]>
 {
 	/// Create a new trie with backing database `db` and empty `root`.
 	pub fn new(db: &'a mut HashDB<H, DBValue>, root: &'a mut H::Out) -> Self {
@@ -324,8 +336,20 @@ where
 			death_row: HashSet::new(),
 			hash_count: 0,
 			marker: PhantomData,
+      tree: BTreeMap::new(),
 		}
 	}
+
+  pub fn tree_from_existing<'b>(db: &'b mut HashDB<H, DBValue>, root: &'b mut H::Out) -> Result<CompactTrie, H::Out, C::Error> {
+    let t = TrieDB::<'b, H, C>::new(db,root)?;
+    
+    let mut res = BTreeMap::new();
+		for kv in t.iter()? {
+      let kv = kv?;
+      res.insert(kv.0.clone(), kv.1.clone());
+    }
+    Ok(res)
+  }
 
 	/// Create a new trie with the backing database `db` and `root.
 	/// Returns an error if `root` does not exist.
@@ -333,6 +357,8 @@ where
 		if !db.contains(root) {
 			return Err(Box::new(TrieError::InvalidStateRoot(*root)));
 		}
+
+    let tree = Self::tree_from_existing(db, root)?;
 
 		let root_handle = NodeHandle::Hash(*root);
 		Ok(TrieDBMut {
@@ -343,6 +369,7 @@ where
 			death_row: HashSet::new(),
 			hash_count: 0,
 			marker: PhantomData,
+      tree,
 		})
 	}
 	/// Get the backing database.
@@ -818,9 +845,90 @@ where
 		}
 	}
 
+	pub fn commit(&mut self) {
+
+    match self.root_handle() {
+			NodeHandle::Hash(_) => return, // no changes necessary.
+			NodeHandle::InMemory(_h) => (),
+		};
+
+    // &'a mut HashDB<H, DBValue>,
+	  let mut db1 = MemoryDB::<H, DBValue>::new(); // TODO compose it with current db
+	  let mut db2 = MemoryDB::<H, DBValue>::new();
+    let curdb = self.db as *mut HashDB<H, DBValue>;
+
+    // following is correct if set back but cannot infer life time
+    // let cur_db = std::mem::replace(&mut self.db, &mut db1);
+
+    //-------------------
+    
+    unsafe {
+      let db = &mut db1 as *mut HashDB<H, DBValue>;
+      self.db = &mut *db;
+    }
+
+    println!("{}",db1.mem_used());
+    self.commit_inner();
+
+    println!("{}",db1.mem_used());
+
+
+    // try to write in clean kvdb to get a size idea
+		//let tempdir = tempdir::TempDir::new("all").unwrap().path();
+		let tempdir  = std::path::Path::new("./all");
+		let config = rocksdb::DatabaseConfig::default();
+		let db = rocksdb::Database::open(&config, tempdir.to_str().unwrap()).unwrap();
+
+    let mut trans = kvdb::DBTransaction::new();
+
+    for k in db1.keys().iter() {
+      let val = db1.get(&k.0);
+      trans.put(None, k.0.as_ref(), &val.unwrap()[..]);
+    }
+
+    db.write(trans).unwrap();
+    db.flush().unwrap();
+
+    //--------------------
+    unsafe {
+      let db = &mut db2 as *mut HashDB<H, DBValue>;
+      self.db = &mut *db;
+    }
+
+    println!("{}",db2.mem_used());
+    self.commit_inner_tree();
+    println!("{}",db2.mem_used());
+
+    // try to write in clean kvdb to get a size idea
+		//let tempdir = tempdir::TempDir::new("some").unwrap().path();
+		let tempdir  = std::path::Path::new("./some");
+		let config = rocksdb::DatabaseConfig::default();
+		let db = rocksdb::Database::open(&config, tempdir.to_str().unwrap()).unwrap();
+
+    let mut trans = kvdb::DBTransaction::new();
+
+    for k in db2.keys().iter() {
+      let val = db2.get(&k.0);
+      trans.put(None, k.0.as_ref(), &val.unwrap()[..]);
+    }
+
+    db.write(trans).unwrap();
+    db.flush().unwrap();
+
+ 
+
+    unsafe {
+      self.db = &mut *curdb;
+    }
+
+    // try write tree
+//    self.commit_inner()
+  }
 	/// Commit the in-memory changes to disk, freeing their storage and
 	/// updating the state root.
-	pub fn commit(&mut self) {
+	fn commit_inner(&mut self) {
+
+
 		trace!(target: "trie", "Committing trie changes to db.");
 
 		// always kill all the nodes on death row.
@@ -849,7 +957,19 @@ where
 				self.root_handle = NodeHandle::InMemory(self.storage.alloc(Stored::Cached(node, hash)));
 			}
 		}
+
+    println!("commit tdbmut: {:?}", self.root);
 	}
+
+	fn commit_inner_tree(&mut self) {
+    let tr = std::mem::replace(&mut self.tree, BTreeMap::new());
+    for (k,v) in tr.into_iter() {
+      // useless key hash: will change on db tree like lmdb : no -> need explicit sized key
+      // -> means a different trait abstraction (here we emplace any key size) + obviously need key ord
+      // iterator.
+      self.db.emplace(H::hash(&k[..]), v);
+    }
+  }
 
 	/// Commit a node by hashing it and writing it to the db. Returns a
 	/// `ChildReference` which in most cases carries a normal hash but for the
@@ -893,6 +1013,7 @@ where
 impl<'a, H, C> TrieMut<H, C> for TrieDBMut<'a, H, C>
 where
 	H: Hasher,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	fn root(&mut self) -> &H::Out {
@@ -901,27 +1022,42 @@ where
 	}
 
 	fn is_empty(&self) -> bool {
-		match self.root_handle {
+		let r = match self.root_handle {
 			NodeHandle::Hash(h) => h == C::HASHED_NULL_NODE,
 			NodeHandle::InMemory(ref h) => match self.storage[h] {
 				Node::Empty => true,
 				_ => false,
 			}
-		}
+		};
+    assert!(self.tree.is_empty() == r);
+    r
 	}
 
 	fn get<'x, 'key>(&'x self, key: &'key [u8]) -> Result<Option<DBValue>, H::Out, C::Error>
 		where 'x: 'key
 	{
-		self.lookup(NibbleSlice::new(key), &self.root_handle)
+		let r = self.lookup(NibbleSlice::new(key), &self.root_handle);
+    if let Ok(ref oval) = &r {
+      assert!(self.tree.get(key) == oval.as_ref())
+    }
+    r
 	}
 
 	fn insert(&mut self, key: &[u8], value: &[u8]) -> Result<Option<DBValue>, H::Out, C::Error> {
-		if value.is_empty() { return self.remove(key) }
+		if value.is_empty() { 
+      let tr = self.tree.remove(key);
+      let kr = self.remove(key);
+      if let Ok(ref v) = &kr {
+        assert!(&tr == v);
+      }
+      return kr;
+    }
 
 		let mut old_val = None;
 
 		trace!(target: "trie", "insert: key={:?}, value={:?}", key.pretty(), value.pretty());
+
+    let ovt = self.tree.insert(key.to_vec(), DBValue::from_slice(value));
 
 		let root_handle = self.root_handle();
 		let (new_handle, changed) = self.insert_at(
@@ -931,6 +1067,8 @@ where
 			&mut old_val,
 		)?;
 
+    assert!(ovt == old_val);
+
 		trace!(target: "trie", "insert: altered trie={}", changed);
 		self.root_handle = NodeHandle::InMemory(new_handle);
 
@@ -938,6 +1076,8 @@ where
 	}
 
 	fn remove(&mut self, key: &[u8]) -> Result<Option<DBValue>, H::Out, C::Error> {
+
+    let tr = self.tree.remove(key);
 		trace!(target: "trie", "remove: key={:?}", key.pretty());
 
 		let root_handle = self.root_handle();
@@ -956,6 +1096,7 @@ where
 			}
 		}
 
+    assert!(tr == old_val);
 		Ok(old_val)
 	}
 }
@@ -963,6 +1104,7 @@ where
 impl<'a, H, C> Drop for TrieDBMut<'a, H, C>
 where
 	H: Hasher,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H>
 {
 	fn drop(&mut self) {

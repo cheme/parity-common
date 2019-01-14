@@ -30,7 +30,7 @@ extern crate ethereum_types;
 extern crate trie_standardmap as standardmap;
 #[cfg(test)]
 extern crate patricia_trie_ethereum as ethtrie;
-#[cfg(test)]
+//#[cfg(test)]
 extern crate memorydb;
 #[cfg(test)]
 extern crate rlp;
@@ -40,6 +40,10 @@ extern crate keccak_hash as keccak;
 extern crate keccak_hasher;
 #[cfg(test)]
 extern crate triehash;
+extern crate heapsize;
+extern crate kvdb_rocksdb as rocksdb;
+extern crate tempdir;
+extern crate kvdb;
 
 use std::{fmt, error};
 use hashdb::{HashDB, Hasher};
@@ -59,7 +63,7 @@ mod nibblevec;
 mod nibbleslice;
 mod node_codec;
 
-pub use self::triedb::{TrieDB, TrieDBIterator};
+pub use self::triedb::{TrieDB, TrieDBIterator, TrieDBIteratorTerm};
 pub use self::triedbmut::{TrieDBMut, ChildReference};
 pub use self::sectriedbmut::SecTrieDBMut;
 pub use self::sectriedb::SecTrieDB;
@@ -287,6 +291,7 @@ impl<'db, H: Hasher, C: NodeCodec<H>> Trie<H, C> for TrieKinds<'db, H, C> {
 impl<'db, H, C> TrieFactory<H, C>
 where
 	H: Hasher,
+  H::Out: heapsize::HeapSizeOf,
 	C: NodeCodec<H> + 'db
 {
 	/// Creates new factory.

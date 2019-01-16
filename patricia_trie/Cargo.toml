@@ -17,6 +17,7 @@ memorydb = { version = "0.3.0", default-features = false }
 kvdb-rocksdb = "0.1.4"
 tempdir = "0.3"
 kvdb = { version = "0.1" }#, path = "../kvdb" }
+rkv = "0.7.0"
 
 [dev-dependencies]
 env_logger = "0.5"

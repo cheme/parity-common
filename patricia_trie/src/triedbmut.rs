@@ -876,15 +876,43 @@ where
     // try to write in clean kvdb to get a size idea
 		//let tempdir = tempdir::TempDir::new("all").unwrap().path();
 		let tempdir  = std::path::Path::new("./all");
+		let tempdirlmdb  = std::path::Path::new("./all2");
 		let config = rocksdb::DatabaseConfig::default();
 		let db = rocksdb::Database::open(&config, tempdir.to_str().unwrap()).unwrap();
+    let mut env = rkv::Rkv::environment_builder();
+  env.set_map_size(10485760 * 2);
+let created_arc = rkv::Manager::singleton().write().unwrap()
+  .get_or_create(tempdirlmdb, |p|rkv::Rkv::from_env(p,env))
+  .unwrap()
+  ;
+let env = created_arc.read().unwrap();
 
+
+let store: rkv::Store = env.open_or_create_default().unwrap();
+
+{
+  let mut count = 0;
+    let mut writer = env.write().unwrap();
+
+    for k in db1.keys().iter() {
+      count += 1;
+      let val = db1.get(&k.0);
+      let r = writer.put(store, k.0.clone(), &rkv::Value::Blob(&val.unwrap()[..]));
+      if r.is_err() {
+println!("fail at {}", count);
+      }
+      r.unwrap();
+    }
+    writer.commit().unwrap();
+}
     let mut trans = kvdb::DBTransaction::new();
 
     for k in db1.keys().iter() {
       let val = db1.get(&k.0);
       trans.put(None, k.0.as_ref(), &val.unwrap()[..]);
     }
+
+
 
     db.write(trans).unwrap();
     db.flush().unwrap();
@@ -902,8 +930,32 @@ where
     // try to write in clean kvdb to get a size idea
 		//let tempdir = tempdir::TempDir::new("some").unwrap().path();
 		let tempdir  = std::path::Path::new("./some");
+		let tempdirlmdb  = std::path::Path::new("./some2");
 		let config = rocksdb::DatabaseConfig::default();
 		let db = rocksdb::Database::open(&config, tempdir.to_str().unwrap()).unwrap();
+    let mut env = rkv::Rkv::environment_builder();
+  env.set_map_size(4000000);
+let created_arc = rkv::Manager::singleton().write().unwrap()
+  .get_or_create(tempdirlmdb, |p|rkv::Rkv::from_env(p,env))
+  .unwrap()
+  ;
+
+
+let env = created_arc.read().unwrap();
+
+
+let store: rkv::Store = env.open_or_create_default().unwrap();
+
+{
+    let mut writer = env.write().unwrap();
+
+    for k in db2.keys().iter() {
+      let val = db2.get(&k.0);
+      writer.put(store, k.0.clone(), &rkv::Value::Blob(&val.unwrap()[..])).unwrap();
+    }
+    writer.commit().unwrap();
+}
+
 
     let mut trans = kvdb::DBTransaction::new();
 

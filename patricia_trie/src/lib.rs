@@ -42,6 +42,7 @@ extern crate keccak_hasher;
 extern crate triehash;
 extern crate heapsize;
 extern crate kvdb_rocksdb as rocksdb;
+extern crate rkv;
 extern crate tempdir;
 extern crate kvdb;
 

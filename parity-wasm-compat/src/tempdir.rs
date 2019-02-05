@@ -18,7 +18,7 @@
 //! tempdir compat TODO is this crate still really usefull (only call to "" path)??
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use tempdir::Tempdir;
+pub use tempdir::TempDir;
 
 #[cfg(all(target_arch = "wasm32", feature = "browser-wasm"))]
 mod tempdir_browser {

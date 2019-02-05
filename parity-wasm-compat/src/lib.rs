@@ -27,7 +27,6 @@ pub mod snappy;
 pub mod time;
 pub mod fs;
 
-#[cfg(feature = "use-tempdir")]
 pub mod tempdir;
 #[cfg(all(target_arch = "wasm32", feature = "browser-wasm"))]
 mod hook_print;

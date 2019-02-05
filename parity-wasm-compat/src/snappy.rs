@@ -24,7 +24,9 @@ extern crate snap;
 extern crate parity_snappy;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use parity_snappy as snappy;
+pub mod snappy {
+  pub use parity_snappy::*;
+}
 
 
 #[cfg(target_arch = "wasm32")]

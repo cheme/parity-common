@@ -6,9 +6,9 @@ description = "Merkle-Patricia Trie (Ethereum Style)"
 license = "GPL-3.0"
 
 [dependencies]
-trie-db = { version = "0.11.0" }
-keccak-hasher = { version = "0.11.0" }
-hash-db = { version = "0.11.0" }
+trie-db = { version = "0.12.2" }
+keccak-hasher = { version = "0.12.2" }
+hash-db = { version = "0.12.2" }
 rlp = { version = "0.3.0", path = "../../rlp" }
 parity-bytes = { version = "0.1", path = "../../parity-bytes" }
 

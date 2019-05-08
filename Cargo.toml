@@ -20,3 +20,9 @@ members = [
 	"ethereum-types",
 	"ethbloom",
 ]
+
+[patch.crates-io]
+trie-db = { git = "https://github.com/cheme/trie.git", branch = "simple-codec" }
+memory-db = { git = "https://github.com/cheme/trie.git", branch = "simple-codec" }
+keccak-hasher = { git = "https://github.com/cheme/trie.git", branch = "simple-codec" }
+hash-db = { git = "https://github.com/cheme/trie.git", branch = "simple-codec" }

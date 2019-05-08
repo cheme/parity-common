@@ -7,12 +7,12 @@ repository = "https://github.com/paritytech/parity-common"
 license = "GPL-3.0"
 
 [dependencies]
-hash-db = { version = "0.11.0", default-features = false }
+hash-db = { version = "0.12.2", default-features = false }
 rlp = { version = "0.3.0", path = "../rlp", default-features = false }
 
 [dev-dependencies]
 trie-standardmap = { version = "0.1", path = "../trie-standardmap" }
-keccak-hasher = { version = "0.11.0" }
+keccak-hasher = { version = "0.12.2" }
 tiny-keccak = "1.4.2"
 ethereum-types = "0.4"
 

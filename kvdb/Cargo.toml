@@ -9,4 +9,5 @@ edition = "2018"
 
 [dependencies]
 smallvec = "1.0.0"
-parity-util-mem = { path = "../parity-util-mem", version = "0.6", default-features = false }
+#parity-util-mem = { path = "../parity-util-mem", version = "0.6", default-features = false }
+parity-util-mem = { version = "0.6", default-features = false }

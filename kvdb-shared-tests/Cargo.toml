@@ -7,4 +7,4 @@ description = "Shared tests for kvdb functionality, to be executed against actua
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-kvdb = { path = "../kvdb", version = "0.5" }
+kvdb = { path = "../kvdb", version = "0.4" }

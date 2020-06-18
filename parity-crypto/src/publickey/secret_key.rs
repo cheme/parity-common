@@ -240,6 +240,7 @@ impl Secret {
 #[deprecated(since="0.6.1", note="please use `copy_from_str` instead, input is not zeroized")]
 impl FromStr for Secret {
 	type Err = Error;
+#[deprecated(since="0.6.1", note="please use `copy_from_str` instead, input is not zeroized")]
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		Ok(H256::from_str(s).map_err(|e| Error::Custom(format!("{:?}", e)))?.into())
 	}
@@ -247,6 +248,7 @@ impl FromStr for Secret {
 
 #[deprecated(since="0.6.1", note="please use `copy_from` instead, input is not zeroized")]
 impl From<[u8; 32]> for Secret {
+#[deprecated(since="0.6.1", note="please use `copy_from_str` instead, input is not zeroized")]
 	fn from(mut k: [u8; 32]) -> Self {
 		let result = Secret { inner: Box::new(H256(k)) };
 		k.zeroize();
@@ -256,6 +258,7 @@ impl From<[u8; 32]> for Secret {
 
 #[deprecated(since="0.6.1", note="please use `copy_from_slice` instead, input is not zeroized")]
 impl From<H256> for Secret {
+#[deprecated(since="0.6.1", note="please use `copy_from_str` instead, input is not zeroized")]
 	fn from(mut s: H256) -> Self {
 		let result = s.0.into();
 		s.0.zeroize();
@@ -267,6 +270,7 @@ impl From<H256> for Secret {
 impl TryFrom<&str> for Secret {
 	type Error = Error;
 
+#[deprecated(since="0.6.1", note="please use `copy_from_str` instead, input is not zeroized")]
 	fn try_from(s: &str) -> Result<Self, Error> {
 		s.parse().map_err(|e| Error::Custom(format!("{:?}", e)))
 	}
@@ -276,6 +280,7 @@ impl TryFrom<&str> for Secret {
 impl TryFrom<&[u8]> for Secret {
 	type Error = Error;
 
+#[deprecated(since="0.6.1", note="please use `copy_from_str` instead, input is not zeroized")]
 	fn try_from(b: &[u8]) -> Result<Self, Error> {
 		if b.len() != SECP256K1_SECRET_KEY_SIZE {
 			return Err(Error::InvalidSecretKey);
@@ -286,6 +291,7 @@ impl TryFrom<&[u8]> for Secret {
 
 #[deprecated(since="0.6.1", note="please use `copy_from_inner` instead, input is not zeroized")]
 impl From<key::SecretKey> for Secret {
+#[deprecated(since="0.6.1", note="please use `copy_from_str` instead, input is not zeroized")]
 	fn from(key: key::SecretKey) -> Self {
 		let mut a = [0; SECP256K1_SECRET_KEY_SIZE];
 		a.copy_from_slice(&key[0..SECP256K1_SECRET_KEY_SIZE]);

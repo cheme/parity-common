@@ -20,6 +20,7 @@ use kvdb::{DBTransaction, DBValue};
 use kvdb_memorydb::{self as in_memory, InMemory};
 use send_wrapper::SendWrapper;
 use std::io;
+use log::{debug, warn};
 
 pub use error::Error;
 pub use kvdb::KeyValueDB;
@@ -65,11 +66,22 @@ impl Database {
 		let in_memory = in_memory::create(columns);
 		// read the columns from the IndexedDB
 		for column in 0..columns {
+			let mut nb_kv = 0usize;
+			let mut size_w = 0usize;
+			let mut key_size_w = 0usize;
+			let nb_kv = &mut nb_kv;
+			let size_w = &mut size_w;
+			let key_size_w = &mut key_size_w;
+
 			let mut txn = DBTransaction::new();
 			let mut stream = indexed_db::idb_cursor(&*inner, column);
 			while let Some((key, value)) = stream.next().await {
+				*nb_kv += 1;
+				*size_w += value.len();
+				*key_size_w += key.as_slice().len();
 				txn.put_vec(column, key.as_ref(), value);
 			}
+			warn!("loaded col_{}: {} {} {}", column, *nb_kv, *key_size_w, *size_w);
 			// write each column into memory
 			in_memory.write(txn).expect("writing in memory always succeeds; qed");
 		}

@@ -14,7 +14,7 @@
 #![deny(missing_docs)]
 
 mod error;
-mod indexed_db;
+//mod indexed_db;
 
 use kvdb::{DBTransaction, DBValue};
 use kvdb_memorydb::{self as in_memory, InMemory};
@@ -32,10 +32,10 @@ use web_sys::IdbDatabase;
 /// Database backed by both IndexedDB and in memory implementation.
 pub struct Database {
 	name: String,
-	version: u32,
+//	version: u32,
 	columns: u32,
 	in_memory: InMemory,
-	indexed_db: SendWrapper<IdbDatabase>,
+//	indexed_db: SendWrapper<IdbDatabase>,
 }
 
 // TODO: implement when web-based implementation need memory stats
@@ -47,7 +47,7 @@ impl Database {
 	pub async fn open(name: String, columns: u32) -> Result<Database, error::Error> {
 		let name_clone = name.clone();
 		// let's try to open the latest version of the db first
-		let db = indexed_db::open(name.as_str(), None, columns).await?;
+/*		let db = indexed_db::open(name.as_str(), None, columns).await?;
 
 		// If we need more column than the latest version has,
 		// then bump the version (+ 1 for the default column).
@@ -62,9 +62,9 @@ impl Database {
 			db
 		};
 		// populate the in_memory db from the IndexedDB
-		let indexed_db::IndexedDB { version, inner, .. } = db;
+		let indexed_db::IndexedDB { version, inner, .. } = db;*/
 		let in_memory = in_memory::create(columns);
-		// read the columns from the IndexedDB
+/*		// read the columns from the IndexedDB
 		for column in 0..columns {
 			let mut nb_kv = 0usize;
 			let mut size_w = 0usize;
@@ -84,8 +84,8 @@ impl Database {
 			warn!("loaded col_{}: {} {} {}", column, *nb_kv, *key_size_w, *size_w);
 			// write each column into memory
 			in_memory.write(txn).expect("writing in memory always succeeds; qed");
-		}
-		Ok(Database { name: name_clone, version, columns, in_memory, indexed_db: inner })
+		}*/
+		Ok(Database { name: name_clone, columns, in_memory})
 	}
 
 	/// Get the database name.
@@ -95,13 +95,12 @@ impl Database {
 
 	/// Get the database version.
 	pub fn version(&self) -> u32 {
-		self.version
+		0
 	}
 }
 
 impl Drop for Database {
 	fn drop(&mut self) {
-		self.indexed_db.close();
 	}
 }
 
@@ -115,7 +114,7 @@ impl KeyValueDB for Database {
 	}
 
 	fn write(&self, transaction: DBTransaction) -> io::Result<()> {
-		let _ = indexed_db::idb_commit_transaction(&*self.indexed_db, &transaction, self.columns);
+		//let _ = indexed_db::idb_commit_transaction(&*self.indexed_db, &transaction, self.columns);
 		self.in_memory.write(transaction)
 	}
 

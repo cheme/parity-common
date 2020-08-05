@@ -128,11 +128,9 @@ impl KeyValueDB for Database {
 	fn write(&self, transaction: DBTransaction) -> io::Result<()> {
 		self.synch.store(true, Ordering::SeqCst);
 		let _ = indexed_db::idb_commit_transaction(&*self.indexed_db, &transaction, self.columns, self.synch.clone());
-		/* as expected do not work, really need to have a different worker feeding a sharedmemorybuffer
-		 * here
 		while self.synch.load(Ordering::SeqCst) {
+			// TODO some incremental calls to js timeout (indexeddb run in a different thread
 		}
-		*/
 		self.in_memory.write(transaction)
 	}
 

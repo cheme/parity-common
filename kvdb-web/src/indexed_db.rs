@@ -14,8 +14,8 @@ use web_sys::{Event, IdbCursorWithValue, IdbDatabase, IdbKeyRange, IdbOpenDbRequ
 
 use futures::channel;
 use futures::prelude::*;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+//use std::sync::atomic::{AtomicBool, Ordering};
+//use std::sync::Arc;
 
 use kvdb::{DBOp, DBTransaction};
 
@@ -120,7 +120,7 @@ pub fn idb_commit_transaction(
 	idb: &IdbDatabase,
 	txn: &DBTransaction,
 	columns: u32,
-	synch: Arc<AtomicBool>,
+	//synch: Arc<AtomicBool>,
 ) -> impl Future<Output = ()> {
 	let store_names_js = store_names_js(columns);
 
@@ -183,7 +183,7 @@ pub fn idb_commit_transaction(
 	let (tx, rx) = channel::oneshot::channel::<()>();
 
 	let on_complete = Closure::once(move || {
-		synch.store(false, Ordering::SeqCst);
+		//synch.store(false, Ordering::SeqCst);
 		let _ = tx.send(());
 	});
 	idb_txn.set_oncomplete(Some(on_complete.as_ref().unchecked_ref()));

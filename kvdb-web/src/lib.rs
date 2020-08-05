@@ -20,8 +20,6 @@ use kvdb::{DBTransaction, DBValue};
 use kvdb_memorydb::{self as in_memory, InMemory};
 use send_wrapper::SendWrapper;
 use std::io;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use log::{debug, warn};
 
 pub use error::Error;
@@ -38,8 +36,6 @@ pub struct Database {
 	columns: u32,
 	in_memory: InMemory,
 	indexed_db: SendWrapper<IdbDatabase>,
-	// Note that this limit to a single write thread to indexed_db
-	synch: Arc<AtomicBool>,
 }
 
 // TODO: implement when web-based implementation need memory stats
@@ -89,14 +85,7 @@ impl Database {
 			// write each column into memory
 			in_memory.write(txn).expect("writing in memory always succeeds; qed");
 		}
-		Ok(Database {
-			name: name_clone,
-			version,
-			columns,
-			in_memory,
-			indexed_db: inner,
-			synch: Arc::new(AtomicBool::new(false)),
-		})
+		Ok(Database { name: name_clone, version, columns, in_memory, indexed_db: inner })
 	}
 
 	/// Get the database name.
@@ -126,11 +115,7 @@ impl KeyValueDB for Database {
 	}
 
 	fn write(&self, transaction: DBTransaction) -> io::Result<()> {
-		self.synch.store(true, Ordering::SeqCst);
-		let _ = indexed_db::idb_commit_transaction(&*self.indexed_db, &transaction, self.columns, self.synch.clone());
-		while self.synch.load(Ordering::SeqCst) {
-			// TODO some incremental calls to js timeout (indexeddb run in a different thread
-		}
+		let _ = indexed_db::idb_commit_transaction(&*self.indexed_db, &transaction, self.columns);
 		self.in_memory.write(transaction)
 	}
 

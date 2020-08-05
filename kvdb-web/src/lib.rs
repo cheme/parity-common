@@ -20,8 +20,8 @@ use kvdb::{DBTransaction, DBValue};
 use kvdb_memorydb::{self as in_memory, InMemory};
 use send_wrapper::SendWrapper;
 use std::io;
-//use std::sync::atomic::{AtomicBool, Ordering};
-//use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use log::{debug, warn};
 
 pub use error::Error;
@@ -38,7 +38,8 @@ pub struct Database {
 	columns: u32,
 	in_memory: InMemory,
 	indexed_db: SendWrapper<IdbDatabase>,
-	synch: (),
+	// Note that this limit to a single write thread to indexed_db
+	synch: Arc<AtomicBool>,
 }
 
 // TODO: implement when web-based implementation need memory stats
@@ -94,7 +95,7 @@ impl Database {
 			columns,
 			in_memory,
 			indexed_db: inner,
-			synch: (),
+			synch: Arc::new(AtomicBool::new(false)),
 		})
 	}
 
@@ -125,9 +126,8 @@ impl KeyValueDB for Database {
 	}
 
 	fn write(&self, transaction: DBTransaction) -> io::Result<()> {
-		//self.synch.store(true, Ordering::SeqCst);
-		let _ = indexed_db::idb_commit_transaction(&*self.indexed_db, &transaction, self.columns);
-		//let _ = indexed_db::idb_commit_transaction(&*self.indexed_db, &transaction, self.columns, self.synch.clone());
+		self.synch.store(true, Ordering::SeqCst);
+		let _ = indexed_db::idb_commit_transaction(&*self.indexed_db, &transaction, self.columns, self.synch.clone());
 		/* as expected do not work, really need to have a different worker feeding a sharedmemorybuffer
 		 * here
 		while self.synch.load(Ordering::SeqCst) {

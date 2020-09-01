@@ -575,7 +575,7 @@ impl Database {
 	}
 
 	/// Iterate from a given prefix
-	fn iter_from<'a>(&'a self, col: u32, prefix: &'a [u8]) -> impl Iterator<Item = iter::KeyValuePair> + 'a {
+	pub fn iter_from<'a>(&'a self, col: u32, prefix: &'a [u8]) -> impl Iterator<Item = iter::KeyValuePair> + 'a {
 		let read_lock = self.db.read();
 		let optional = if read_lock.is_some() {
 			let read_opts = generate_read_options();

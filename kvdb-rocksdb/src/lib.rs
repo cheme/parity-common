@@ -574,6 +574,19 @@ impl Database {
 		optional.into_iter().flat_map(identity)
 	}
 
+	/// Iterate from a given prefix
+	fn iter_from<'a>(&'a self, col: u32, prefix: &'a [u8]) -> impl Iterator<Item = iter::KeyValuePair> + 'a {
+		let read_lock = self.db.read();
+		let optional = if read_lock.is_some() {
+			let read_opts = generate_read_options();
+			let guarded = iter::ReadGuardedIterator::new_with_prefix(read_lock, col, prefix, read_opts);
+			Some(guarded)
+		} else {
+			None
+		};
+		optional.into_iter().flat_map(identity)
+	}
+
 	/// Iterator over data in the `col` database column index matching the given prefix.
 	/// Will hold a lock until the iterator is dropped
 	/// preventing the database from being closed.

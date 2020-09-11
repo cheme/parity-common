@@ -40,6 +40,16 @@ fn hash_impl_is_the_same_as_for_a_slice() {
 	assert_eq!(uint_hash, slice_hash);
 }
 
+// https://github.com/paritytech/parity-common/issues/420
+#[test]
+fn const_matching_works() {
+	const ONE: U256 = U256([1, 0, 0, 0]);
+	match U256::zero() {
+		ONE => unreachable!(),
+		_ => {}
+	}
+}
+
 #[test]
 fn u128_conversions() {
 	let mut a = U256::from(u128::max_value());
@@ -55,6 +65,14 @@ fn uint256_checked_ops() {
 	let z = U256::from(0);
 	let a = U256::from(10);
 	let b = !U256::from(1);
+
+	assert_eq!(U256::from(10).checked_pow(U256::from(0)), Some(U256::from(1)));
+	assert_eq!(U256::from(10).checked_pow(U256::from(1)), Some(U256::from(10)));
+	assert_eq!(U256::from(10).checked_pow(U256::from(2)), Some(U256::from(100)));
+	assert_eq!(U256::from(10).checked_pow(U256::from(3)), Some(U256::from(1000)));
+	assert_eq!(U256::from(10).checked_pow(U256::from(20)), Some(U256::exp10(20)));
+	assert_eq!(U256::from(2).checked_pow(U256::from(0x100)), None);
+	assert_eq!(U256::max_value().checked_pow(U256::from(2)), None);
 
 	assert_eq!(a.checked_add(b), None);
 	assert_eq!(a.checked_add(a), Some(20.into()));
@@ -118,90 +136,15 @@ fn uint256_from() {
 	assert_eq!(e, sa);
 	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
 	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
 	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
 	assert_eq!(U256([0x12f0, 1, 0, 0]), U256::from_str("0100000000000012f0").unwrap());
 	assert_eq!(
 		U256([0x12f0, 1, 0x0910203040506077, 0x8090a0b0c0d0e0f0]),
 		U256::from_str("8090a0b0c0d0e0f00910203040506077000000000000000100000000000012f0").unwrap()
 	);
-	let sa = U256::from_str("0a").unwrap();
-	assert_eq!(e, sa);
-	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
-	assert_eq!(U256([0x12f0, 1, 0, 0]), U256::from_str("0100000000000012f0").unwrap());
-	assert_eq!(
-		U256([0x12f0, 1, 0x0910203040506077, 0x8090a0b0c0d0e0f0]),
-		U256::from_str("8090a0b0c0d0e0f00910203040506077000000000000000100000000000012f0").unwrap()
-	);
-	let sa = U256::from_str("0a").unwrap();
-	assert_eq!(e, sa);
-	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
-	assert_eq!(U256([0x12f0, 1, 0, 0]), U256::from_str("0100000000000012f0").unwrap());
-	assert_eq!(
-		U256([0x12f0, 1, 0x0910203040506077, 0x8090a0b0c0d0e0f0]),
-		U256::from_str("8090a0b0c0d0e0f00910203040506077000000000000000100000000000012f0").unwrap()
-	);
-	let sa = U256::from_str("0a").unwrap();
-	assert_eq!(e, sa);
-	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
-	assert_eq!(U256([0x12f0, 1, 0, 0]), U256::from_str("0100000000000012f0").unwrap());
-	assert_eq!(
-		U256([0x12f0, 1, 0x0910203040506077, 0x8090a0b0c0d0e0f0]),
-		U256::from_str("8090a0b0c0d0e0f00910203040506077000000000000000100000000000012f0").unwrap()
-	);
-	let sa = U256::from_str("0a").unwrap();
-	assert_eq!(e, sa);
-	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
-	assert_eq!(U256([0x12f0, 1, 0, 0]), U256::from_str("0100000000000012f0").unwrap());
-	assert_eq!(
-		U256([0x12f0, 1, 0x0910203040506077, 0x8090a0b0c0d0e0f0]),
-		U256::from_str("8090a0b0c0d0e0f00910203040506077000000000000000100000000000012f0").unwrap()
-	);
-	let sa = U256::from_str("0a").unwrap();
-	assert_eq!(e, sa);
-	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
-	assert_eq!(U256([0x12f0, 1, 0, 0]), U256::from_str("0100000000000012f0").unwrap());
-	assert_eq!(
-		U256([0x12f0, 1, 0x0910203040506077, 0x8090a0b0c0d0e0f0]),
-		U256::from_str("8090a0b0c0d0e0f00910203040506077000000000000000100000000000012f0").unwrap()
-	);
-	let sa = U256::from_str("0a").unwrap();
-	assert_eq!(e, sa);
-	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
-	assert_eq!(U256([0x12f0, 1, 0, 0]), U256::from_str("0100000000000012f0").unwrap());
-	assert_eq!(
-		U256([0x12f0, 1, 0x0910203040506077, 0x8090a0b0c0d0e0f0]),
-		U256::from_str("8090a0b0c0d0e0f00910203040506077000000000000000100000000000012f0").unwrap()
-	);
-	let sa = U256::from_str("0a").unwrap();
-	assert_eq!(e, sa);
-	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
-	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
-	assert_eq!(U256([0x12f0, 1, 0, 0]), U256::from_str("0100000000000012f0").unwrap());
-	assert_eq!(
-		U256([0x12f0, 1, 0x0910203040506077, 0x8090a0b0c0d0e0f0]),
-		U256::from_str("8090a0b0c0d0e0f00910203040506077000000000000000100000000000012f0").unwrap()
-	);
+
+	// This string contains more bits than what fits in a U256.
+	assert!(U256::from_str("000000000000000000000000000000000000000000000000000000000000000000").is_err());
 }
 
 #[test]
@@ -1185,6 +1128,10 @@ pub mod laws {
 				quickcheck! {
 					fn pow_mul(x: $uint_ty) -> TestResult {
 						if x.overflowing_pow($uint_ty::from(2)).1 || x.overflowing_pow($uint_ty::from(3)).1 {
+							// On overflow `checked_pow` should return `None`.
+							assert_eq!(x.checked_pow($uint_ty::from(2)), None);
+							assert_eq!(x.checked_pow($uint_ty::from(3)), None);
+
 							return TestResult::discard();
 						}
 

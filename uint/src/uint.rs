@@ -135,7 +135,7 @@ macro_rules! uint_overflowing_binop {
 		}
 
 		($name(ret), carry > 0)
-		}};
+	}};
 }
 
 #[macro_export]
@@ -244,7 +244,7 @@ macro_rules! panic_on_overflow {
 	($name: expr) => {
 		if $name {
 			panic!("arithmetic operation overflow")
-			}
+		}
 	};
 }
 
@@ -445,7 +445,7 @@ macro_rules! construct_uint {
 		/// Little-endian large integer type
 		#[repr(C)]
 		$(#[$attr])*
-		#[derive(Copy, Clone)]
+		#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 		$visibility struct $name (pub [u64; $n_words]);
 
 		/// Get a reference to the underlying little-endian words.
@@ -597,7 +597,7 @@ macro_rules! construct_uint {
 				r
 			}
 
-			/// Returns the number of leading zeros in the binary representation of self.
+			/// Returns the number of trailing zeros in the binary representation of self.
 			pub fn trailing_zeros(&self) -> u32 {
 				let mut r = 0;
 				for i in 0..$n_words {
@@ -899,6 +899,14 @@ macro_rules! construct_uint {
 				(res, overflow)
 			}
 
+			/// Checked exponentiation. Returns `None` if overflow occurred.
+			pub fn checked_pow(self, expon: $name) -> Option<$name> {
+				match self.overflowing_pow(expon) {
+					(_, true) => None,
+					(val, _) => Some(val),
+				}
+			}
+
 			/// Add with overflow.
 			#[inline(always)]
 			pub fn overflowing_add(self, other: $name) -> ($name, bool) {
@@ -1115,13 +1123,15 @@ macro_rules! construct_uint {
 
 			/// Converts from big endian representation bytes in memory.
 			pub fn from_big_endian(slice: &[u8]) -> Self {
+				use $crate::byteorder::{ByteOrder, BigEndian};
 				assert!($n_words * 8 >= slice.len());
 
+				let mut padded = [0u8; $n_words * 8];
+				padded[$n_words * 8 - slice.len() .. $n_words * 8].copy_from_slice(&slice);
+
 				let mut ret = [0; $n_words];
-				unsafe {
-					let ret_u8: &mut [u8; $n_words * 8] = $crate::core_::mem::transmute(&mut ret);
-					ret_u8[0..slice.len()].copy_from_slice(slice);
-					ret_u8[0..slice.len()].reverse();
+				for i in 0..$n_words {
+					ret[$n_words - i - 1] = BigEndian::read_u64(&padded[8 * i..]);
 				}
 
 				$name(ret)
@@ -1129,12 +1139,15 @@ macro_rules! construct_uint {
 
 			/// Converts from little endian representation bytes in memory.
 			pub fn from_little_endian(slice: &[u8]) -> Self {
+				use $crate::byteorder::{ByteOrder, LittleEndian};
 				assert!($n_words * 8 >= slice.len());
 
+				let mut padded = [0u8; $n_words * 8];
+				padded[0..slice.len()].copy_from_slice(&slice);
+
 				let mut ret = [0; $n_words];
-				unsafe {
-					let ret_u8: &mut [u8; $n_words * 8] = $crate::core_::mem::transmute(&mut ret);
-					ret_u8[0..slice.len()].copy_from_slice(&slice);
+				for i in 0..$n_words {
+					ret[i] = LittleEndian::read_u64(&padded[8 * i..]);
 				}
 
 				$name(ret)
@@ -1462,26 +1475,9 @@ macro_rules! construct_uint {
 			}
 		}
 
-		// We implement `Eq` and `Hash` manually to workaround
-		// https://github.com/rust-lang/rust/issues/61415
-		impl $crate::core_::cmp::PartialEq for $name {
-			fn eq(&self, other: &$name) -> bool {
-				self.as_ref() == other.as_ref()
-			}
-		}
-
-		impl $crate::core_::cmp::Eq for $name {}
-
-		impl $crate::core_::hash::Hash for $name {
-			fn hash<H: $crate::core_::hash::Hasher>(&self, state: &mut H) {
-				// use the impl as slice &[u64]
-				self.as_ref().hash(state);
-			}
-		}
-
 		impl $crate::core_::cmp::Ord for $name {
 			fn cmp(&self, other: &$name) -> $crate::core_::cmp::Ordering {
-                self.as_ref().iter().rev().cmp(other.as_ref().iter().rev())
+				self.as_ref().iter().rev().cmp(other.as_ref().iter().rev())
 			}
 		}
 
@@ -1576,6 +1572,10 @@ macro_rules! impl_std_for_uint {
 					true => value.from_hex()?,
 					false => ("0".to_owned() + value).from_hex()?,
 				};
+
+				if $n_words * 8 < bytes.len() {
+					return Err(Self::Err::InvalidHexLength);
+				}
 
 				let bytes_ref: &[u8] = &bytes;
 				Ok(From::from(bytes_ref))

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 
+## [0.8.0] - 2021-01-27
+### Breaking
+- Updated `ethereum-types` to 0.11. [#510](https://github.com/paritytech/parity-common/pull/510)
+
+## [0.7.0] - 2021-01-05
+### Breaking
+- Bump `rust-secp256k1` to v0.19, always allow zero signatures. [#438](https://github.com/paritytech/parity-common/pull/438)
+- Updated `rlp` to 0.5. [#463](https://github.com/paritytech/parity-common/pull/463)
+- Updated dependencies. [#483](https://github.com/paritytech/parity-common/pull/483)
+- Remove deprecated trait impls `FromStr`/`TryFrom` for `Secret` [#495](https://github.com/paritytech/parity-common/pull/495)
+
 ## [0.6.2] - 2020-06-19
 - Put `Secret` memory on heap. [#400](https://github.com/paritytech/parity-common/pull/400)
 - Add `copy_from_str` conversion methods for `Secret`.
@@ -13,7 +24,7 @@ The format is based on [Keep a Changelog].
 
 ## [0.6.1] - 2020-04-11
 - Add `recover_allowing_all_zero_message()` and `ZeroesAllowedMessage` to accomodate ethereum's `ecrecover` builtin. [#369](https://github.com/paritytech/parity-common/pull/369)
- 
+
 ## [0.6.0] - 2020-03-16
 - License changed from GPL3 to dual MIT/Apache2. [#342](https://github.com/paritytech/parity-common/pull/342)
 - Updated dependencies. [#361](https://github.com/paritytech/parity-common/pull/361)

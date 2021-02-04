@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 
+## [0.9.0] - 2021-01-27
+### Breaking
+- Updated `ethereum-types` to 0.11. [#510](https://github.com/paritytech/parity-common/pull/510)
+- Updated `primitive-types` to 0.9. [#510](https://github.com/paritytech/parity-common/pull/510)
+
+## [0.8.0] - 2021-01-05
+- Updated dlmalloc to 0.2.1. [#452](https://github.com/paritytech/parity-common/pull/452)
+### Breaking
+- Updated `ethereum-types` to 0.10. [#463](https://github.com/paritytech/parity-common/pull/463)
+- Updated `parking_lot` to 0.11.1. [#470](https://github.com/paritytech/parity-common/pull/470)
+
 ## [0.7.0] - 2020-06-24
 - Added `const_size` to `MallocSizeOf` to optimize it for flat collections. [#398](https://github.com/paritytech/parity-common/pull/398)
 - Exported `MallocShallowSizeOf`. [#399](https://github.com/paritytech/parity-common/pull/399)

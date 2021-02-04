@@ -7,7 +7,8 @@
 // except according to those terms.
 
 #[cfg(not(feature = "std"))]
-use alloc::{borrow::ToOwned, string::String, vec::Vec};
+use alloc::{borrow::ToOwned, boxed::Box, string::String, vec::Vec};
+use bytes::{Bytes, BytesMut};
 use core::iter::{empty, once};
 use core::{mem, str};
 
@@ -30,6 +31,18 @@ pub fn decode_usize(bytes: &[u8]) -> Result<usize, DecoderError> {
 			Ok(res)
 		}
 		_ => Err(DecoderError::RlpIsTooBig),
+	}
+}
+
+impl<T: Encodable + ?Sized> Encodable for Box<T> {
+	fn rlp_append(&self, s: &mut RlpStream) {
+		Encodable::rlp_append(&**self, s)
+	}
+}
+
+impl<T: Decodable> Decodable for Box<T> {
+	fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
+		T::decode(rlp).map(Box::new)
 	}
 }
 
@@ -64,6 +77,30 @@ impl Encodable for Vec<u8> {
 impl Decodable for Vec<u8> {
 	fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
 		rlp.decoder().decode_value(|bytes| Ok(bytes.to_vec()))
+	}
+}
+
+impl Encodable for Bytes {
+	fn rlp_append(&self, s: &mut RlpStream) {
+		s.encoder().encode_value(self);
+	}
+}
+
+impl Decodable for Bytes {
+	fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
+		rlp.decoder().decode_value(|bytes| Ok(Bytes::copy_from_slice(bytes)))
+	}
+}
+
+impl Encodable for BytesMut {
+	fn rlp_append(&self, s: &mut RlpStream) {
+		s.encoder().encode_value(self);
+	}
+}
+
+impl Decodable for BytesMut {
+	fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
+		rlp.decoder().decode_value(|bytes| Ok(bytes.into()))
 	}
 }
 
@@ -158,10 +195,12 @@ macro_rules! impl_decodable_for_u {
 impl_encodable_for_u!(u16);
 impl_encodable_for_u!(u32);
 impl_encodable_for_u!(u64);
+impl_encodable_for_u!(u128);
 
 impl_decodable_for_u!(u16);
 impl_decodable_for_u!(u32);
 impl_decodable_for_u!(u64);
+impl_decodable_for_u!(u128);
 
 impl Encodable for usize {
 	fn rlp_append(&self, s: &mut RlpStream) {

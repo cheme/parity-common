@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 
+## [0.9.0] - 2021-01-27
+### Breaking
+- Updated `kvdb` to 0.9. [#510](https://github.com/paritytech/parity-common/pull/510)
+- Updated `kvdb-memorydb` to 0.9. [#510](https://github.com/paritytech/parity-common/pull/510)
+- Updated `parity-util-mem` to 0.9. [#510](https://github.com/paritytech/parity-common/pull/510)
+
+## [0.8.0] - 2021-01-05
+### Breaking
+- Updated dependencies. [#470](https://github.com/paritytech/parity-common/pull/470)
+
 ## [0.7.0] - 2020-07-06
 - Updated `kvdb` to 0.7.0 [#404](https://github.com/paritytech/parity-common/pull/404)
 

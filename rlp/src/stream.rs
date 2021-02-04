@@ -8,6 +8,7 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+use bytes::{BufMut, BytesMut};
 use core::borrow::Borrow;
 
 use crate::traits::Encodable;
@@ -28,7 +29,8 @@ impl ListInfo {
 /// Appendable rlp encoder.
 pub struct RlpStream {
 	unfinished_lists: Vec<ListInfo>,
-	buffer: Vec<u8>,
+	start_pos: usize,
+	buffer: BytesMut,
 	finished_list: bool,
 }
 
@@ -41,14 +43,28 @@ impl Default for RlpStream {
 impl RlpStream {
 	/// Initializes instance of empty `Stream`.
 	pub fn new() -> Self {
-		RlpStream { unfinished_lists: Vec::with_capacity(16), buffer: Vec::with_capacity(1024), finished_list: false }
+		Self::new_with_buffer(BytesMut::with_capacity(1024))
 	}
 
 	/// Initializes the `Stream` as a list.
 	pub fn new_list(len: usize) -> Self {
-		let mut stream = RlpStream::new();
+		Self::new_list_with_buffer(BytesMut::with_capacity(1024), len)
+	}
+
+	/// Initializes instance of empty `Stream`.
+	pub fn new_with_buffer(buffer: BytesMut) -> Self {
+		RlpStream { unfinished_lists: Vec::with_capacity(16), start_pos: buffer.len(), buffer, finished_list: false }
+	}
+
+	/// Initializes the `Stream` as a list.
+	pub fn new_list_with_buffer(buffer: BytesMut, len: usize) -> Self {
+		let mut stream = RlpStream::new_with_buffer(buffer);
 		stream.begin_list(len);
 		stream
+	}
+
+	fn total_written(&self) -> usize {
+		self.buffer.len() - self.start_pos
 	}
 
 	/// Apends null to the end of stream, chainable.
@@ -62,18 +78,13 @@ impl RlpStream {
 	/// ```
 	pub fn append_empty_data(&mut self) -> &mut Self {
 		// self push raw item
-		self.buffer.push(0x80);
+		self.buffer.put_u8(0x80);
 
 		// try to finish and prepend the length
 		self.note_appended(1);
 
 		// return chainable self
 		self
-	}
-
-	/// Drain the object and return the underlying ElasticArray. Panics if it is not finished.
-	pub fn drain(self) -> Vec<u8> {
-		self.out()
 	}
 
 	/// Appends raw (pre-serialised) RLP data. Use with caution. Chainable.
@@ -168,16 +179,16 @@ impl RlpStream {
 		match len {
 			0 => {
 				// we may finish, if the appended list len is equal 0
-				self.buffer.push(0xc0u8);
+				self.buffer.put_u8(0xc0u8);
 				self.note_appended(1);
 				self.finished_list = true;
 			}
 			_ => {
 				// payload is longer than 1 byte only for lists > 55 bytes
 				// by pushing always this 1 byte we may avoid unnecessary shift of data
-				self.buffer.push(0);
+				self.buffer.put_u8(0);
 
-				let position = self.buffer.len();
+				let position = self.total_written();
 				self.unfinished_lists.push(ListInfo::new(position, Some(len)));
 			}
 		}
@@ -191,8 +202,8 @@ impl RlpStream {
 		self.finished_list = false;
 		// payload is longer than 1 byte only for lists > 55 bytes
 		// by pushing always this 1 byte we may avoid unnecessary shift of data
-		self.buffer.push(0);
-		let position = self.buffer.len();
+		self.buffer.put_u8(0);
+		let position = self.total_written();
 		self.unfinished_lists.push(ListInfo::new(position, None));
 		// return chainable self
 		self
@@ -209,7 +220,7 @@ impl RlpStream {
 
 	/// Calculate total RLP size for appended payload.
 	pub fn estimate_size(&self, add: usize) -> usize {
-		let total_size = self.buffer.len() + add;
+		let total_size = self.total_written() + add;
 		let mut base_size = total_size;
 		for list in &self.unfinished_lists[..] {
 			let len = total_size - list.position;
@@ -244,7 +255,7 @@ impl RlpStream {
 	/// ```
 	pub fn clear(&mut self) {
 		// clear bytes
-		self.buffer.clear();
+		self.buffer.truncate(self.start_pos);
 
 		// clear lists
 		self.unfinished_lists.clear();
@@ -275,7 +286,7 @@ impl RlpStream {
 	/// Streams out encoded bytes.
 	///
 	/// panic! if stream is not finished.
-	pub fn out(self) -> Vec<u8> {
+	pub fn out(self) -> BytesMut {
 		if self.is_finished() {
 			self.buffer
 		} else {
@@ -303,7 +314,7 @@ impl RlpStream {
 		};
 		if should_finish {
 			let x = self.unfinished_lists.pop().unwrap();
-			let len = self.buffer.len() - x.position;
+			let len = self.total_written() - x.position;
 			self.encoder().insert_list_payload(len, x.position);
 			self.note_appended(1);
 		}
@@ -311,7 +322,7 @@ impl RlpStream {
 	}
 
 	pub fn encoder(&mut self) -> BasicEncoder {
-		BasicEncoder::new(self)
+		BasicEncoder::new(self, self.start_pos)
 	}
 
 	/// Finalize current unbounded list. Panics if no unbounded list has been opened.
@@ -320,26 +331,25 @@ impl RlpStream {
 		if list.max.is_some() {
 			panic!("List type mismatch.");
 		}
-		let len = self.buffer.len() - list.position;
+		let len = self.total_written() - list.position;
 		self.encoder().insert_list_payload(len, list.position);
 		self.note_appended(1);
 		self.finished_list = true;
 	}
-
-	/// Finalize current unbounded list. Panics if no unbounded list has been opened.
-	#[deprecated(since = "0.4.3", note = "use finalize_unbounded_list instead")]
-	pub fn complete_unbounded_list(&mut self) {
-		self.finalize_unbounded_list();
-	}
 }
 
 pub struct BasicEncoder<'a> {
-	buffer: &'a mut Vec<u8>,
+	buffer: &'a mut BytesMut,
+	start_pos: usize,
 }
 
 impl<'a> BasicEncoder<'a> {
-	fn new(stream: &'a mut RlpStream) -> Self {
-		BasicEncoder { buffer: &mut stream.buffer }
+	fn new(stream: &'a mut RlpStream, start_pos: usize) -> Self {
+		BasicEncoder { buffer: &mut stream.buffer, start_pos }
+	}
+
+	fn total_written(&self) -> usize {
+		self.buffer.len() - self.start_pos
 	}
 
 	fn insert_size(&mut self, size: usize, position: usize) -> u8 {
@@ -347,10 +357,10 @@ impl<'a> BasicEncoder<'a> {
 		let leading_empty_bytes = size.leading_zeros() as usize / 8;
 		let size_bytes = 4 - leading_empty_bytes as u8;
 		let buffer: [u8; 4] = size.to_be_bytes();
-		assert!(position <= self.buffer.len());
+		assert!(position <= self.total_written());
 
 		self.buffer.extend_from_slice(&buffer[leading_empty_bytes..]);
-		self.buffer[position..].rotate_right(size_bytes as usize);
+		self.buffer[self.start_pos + position..].rotate_right(size_bytes as usize);
 		size_bytes as u8
 	}
 
@@ -359,11 +369,11 @@ impl<'a> BasicEncoder<'a> {
 		// 1 byte was already reserved for payload earlier
 		match len {
 			0..=55 => {
-				self.buffer[pos - 1] = 0xc0u8 + len as u8;
+				self.buffer[self.start_pos + pos - 1] = 0xc0u8 + len as u8;
 			}
 			_ => {
 				let inserted_bytes = self.insert_size(len, pos);
-				self.buffer[pos - 1] = 0xf7u8 + inserted_bytes;
+				self.buffer[self.start_pos + pos - 1] = 0xf7u8 + inserted_bytes;
 			}
 		};
 	}
@@ -387,25 +397,25 @@ impl<'a> BasicEncoder<'a> {
 		};
 		match len {
 			// just 0
-			0 => self.buffer.push(0x80u8),
+			0 => self.buffer.put_u8(0x80u8),
 			len @ 1..=55 => {
 				let first = value.next().expect("iterator length is higher than 1");
 				if len == 1 && first < 0x80 {
 					// byte is its own encoding if < 0x80
-					self.buffer.push(first);
+					self.buffer.put_u8(first);
 				} else {
 					// (prefix + length), followed by the string
-					self.buffer.push(0x80u8 + len as u8);
-					self.buffer.push(first);
+					self.buffer.put_u8(0x80u8 + len as u8);
+					self.buffer.put_u8(first);
 					self.buffer.extend(value);
 				}
 			}
 			// (prefix + length of length), followed by the length, followd by the string
 			len => {
-				self.buffer.push(0);
-				let position = self.buffer.len();
+				self.buffer.put_u8(0);
+				let position = self.total_written();
 				let inserted_bytes = self.insert_size(len, position);
-				self.buffer[position - 1] = 0xb7 + inserted_bytes;
+				self.buffer[self.start_pos + position - 1] = 0xb7 + inserted_bytes;
 				self.buffer.extend(value);
 			}
 		}

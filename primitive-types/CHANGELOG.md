@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 
+## [0.9.0] - 2021-01-27
+### Breaking
+- Updated `impl-codec` to 0.5. [#510](https://github.com/paritytech/parity-common/pull/510)
+- Updated `scale-info` to 0.5. [#510](https://github.com/paritytech/parity-common/pull/510)
+
+## [0.8.0] - 2021-01-05
+- Added `num-traits` feature. [#480](https://github.com/paritytech/parity-common/pull/480)
+### Breaking
+- Updated `impl-rlp` to `rlp` 0.5. [#463](https://github.com/paritytech/parity-common/pull/463)
+- Updated `uint` to 0.9. [#486](https://github.com/paritytech/parity-common/pull/486)
+
+## [0.7.3] - 2020-11-12
+- Added `scale_info` support. [#312](https://github.com/paritytech/parity-common/pull/312)
+- Added `H128` type. [#434](https://github.com/paritytech/parity-common/pull/434)
+- Added `fp-conversion` feature: `U256` <-> `f64`. [#436](https://github.com/paritytech/parity-common/pull/436)
+
 ## [0.7.2] - 2020-05-05
 - Added `serde_no_std` feature. [#385](https://github.com/paritytech/parity-common/pull/385)
 

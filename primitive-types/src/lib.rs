@@ -14,6 +14,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "fp-conversion")]
+mod fp_conversion;
+
 use core::convert::TryFrom;
 use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
 #[cfg(feature = "scale-info")]
@@ -44,6 +47,12 @@ construct_uint! {
 }
 
 construct_fixed_hash! {
+	/// Fixed-size uninterpreted hash type with 16 bytes (128 bits) size.
+	#[cfg_attr(feature = "scale-info", derive(TypeInfo))]
+	pub struct H128(16);
+}
+
+construct_fixed_hash! {
 	/// Fixed-size uninterpreted hash type with 20 bytes (160 bits) size.
 	#[cfg_attr(feature = "scale-info", derive(TypeInfo))]
 	pub struct H160(20);
@@ -59,6 +68,16 @@ construct_fixed_hash! {
 	pub struct H512(64);
 }
 
+#[cfg(feature = "num-traits")]
+mod num_traits {
+	use super::*;
+	use impl_num_traits::impl_uint_num_traits;
+
+	impl_uint_num_traits!(U128, 2);
+	impl_uint_num_traits!(U256, 4);
+	impl_uint_num_traits!(U512, 8);
+}
+
 #[cfg(feature = "impl-serde")]
 mod serde {
 	use super::*;
@@ -68,6 +87,7 @@ mod serde {
 	impl_uint_serde!(U256, 4);
 	impl_uint_serde!(U512, 8);
 
+	impl_fixed_hash_serde!(H128, 16);
 	impl_fixed_hash_serde!(H160, 20);
 	impl_fixed_hash_serde!(H256, 32);
 	impl_fixed_hash_serde!(H512, 64);
@@ -82,6 +102,7 @@ mod codec {
 	impl_uint_codec!(U256, 4);
 	impl_uint_codec!(U512, 8);
 
+	impl_fixed_hash_codec!(H128, 16);
 	impl_fixed_hash_codec!(H160, 20);
 	impl_fixed_hash_codec!(H256, 32);
 	impl_fixed_hash_codec!(H512, 64);
@@ -96,6 +117,7 @@ mod rlp {
 	impl_uint_rlp!(U256, 4);
 	impl_uint_rlp!(U512, 8);
 
+	impl_fixed_hash_rlp!(H128, 16);
 	impl_fixed_hash_rlp!(H160, 20);
 	impl_fixed_hash_rlp!(H256, 32);
 	impl_fixed_hash_rlp!(H512, 64);

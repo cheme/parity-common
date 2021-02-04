@@ -99,7 +99,7 @@ fn main() {
 	for c in 0..=COLUMN_COUNT {
 		config.memory_budget.insert(c, mb_per_col);
 	}
-	let dir = tempdir::TempDir::new("rocksdb-example").unwrap();
+	let dir = tempfile::Builder::new().prefix("rocksdb-example").tempdir().unwrap();
 
 	println!("Database is put in: {} (maybe check if it was deleted)", dir.path().to_string_lossy());
 	let db = Database::open(&config, &dir.path().to_string_lossy()).unwrap();
@@ -136,7 +136,7 @@ fn main() {
 		keyvalues = KeyValueSeed::with_seed(seed);
 
 		if step % 10000 == 9999 {
-			let timestamp = time::strftime("%Y-%m-%d %H:%M:%S", &time::now()).expect("Error formatting log timestamp");
+			let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
 
 			println!("{}", timestamp);
 			println!("\tData written: {} keys - {} Mb", step + 1, ((step + 1) * 64 * 128) / 1024 / 1024);

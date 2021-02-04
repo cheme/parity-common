@@ -19,7 +19,7 @@ pub use byteorder;
 pub use core as core_;
 
 #[doc(hidden)]
-pub use rustc_hex;
+pub use hex;
 
 #[cfg(feature = "quickcheck")]
 #[doc(hidden)]
@@ -27,7 +27,7 @@ pub use qc;
 
 #[cfg(feature = "quickcheck")]
 #[doc(hidden)]
-pub use rand;
+pub use rand07;
 
 #[cfg(feature = "arbitrary")]
 #[doc(hidden)]

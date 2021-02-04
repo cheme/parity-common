@@ -29,6 +29,104 @@
 //! implementations for even more speed, hidden behind the `x64_arithmetic`
 //! feature flag.
 
+use core::fmt;
+
+/// A list of error categories encountered when parsing numbers.
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[non_exhaustive]
+pub enum FromStrRadixErrKind {
+	/// A character in the input string is not valid for the given radix.
+	InvalidCharacter,
+
+	/// The input length is not valid for the given radix.
+	InvalidLength,
+
+	/// The given radix is not supported.
+	UnsupportedRadix,
+}
+
+#[derive(Debug)]
+enum FromStrRadixErrSrc {
+	Hex(FromHexError),
+	Dec(FromDecStrErr),
+}
+
+impl fmt::Display for FromStrRadixErrSrc {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			FromStrRadixErrSrc::Dec(d) => write!(f, "{}", d),
+			FromStrRadixErrSrc::Hex(h) => write!(f, "{}", h),
+		}
+	}
+}
+
+/// The error type for parsing numbers from strings.
+#[derive(Debug)]
+pub struct FromStrRadixErr {
+	kind: FromStrRadixErrKind,
+	source: Option<FromStrRadixErrSrc>,
+}
+
+impl FromStrRadixErr {
+	#[doc(hidden)]
+	pub fn unsupported() -> Self {
+		Self { kind: FromStrRadixErrKind::UnsupportedRadix, source: None }
+	}
+
+	/// Returns the corresponding `FromStrRadixErrKind` for this error.
+	pub fn kind(&self) -> FromStrRadixErrKind {
+		self.kind
+	}
+}
+
+impl fmt::Display for FromStrRadixErr {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		if let Some(ref src) = self.source {
+			return write!(f, "{}", src);
+		}
+
+		match self.kind {
+			FromStrRadixErrKind::UnsupportedRadix => write!(f, "the given radix is not supported"),
+			FromStrRadixErrKind::InvalidCharacter => write!(f, "input contains an invalid character"),
+			FromStrRadixErrKind::InvalidLength => write!(f, "length not supported for radix or type"),
+		}
+	}
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for FromStrRadixErr {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self.source {
+			Some(FromStrRadixErrSrc::Dec(ref d)) => Some(d),
+			Some(FromStrRadixErrSrc::Hex(ref h)) => Some(h),
+			None => None,
+		}
+	}
+}
+
+impl From<FromDecStrErr> for FromStrRadixErr {
+	fn from(e: FromDecStrErr) -> Self {
+		let kind = match e {
+			FromDecStrErr::InvalidCharacter => FromStrRadixErrKind::InvalidCharacter,
+			FromDecStrErr::InvalidLength => FromStrRadixErrKind::InvalidLength,
+		};
+
+		Self { kind, source: Some(FromStrRadixErrSrc::Dec(e)) }
+	}
+}
+
+impl From<FromHexError> for FromStrRadixErr {
+	fn from(e: FromHexError) -> Self {
+		let kind = match e.inner {
+			hex::FromHexError::InvalidHexCharacter { .. } => FromStrRadixErrKind::InvalidCharacter,
+			hex::FromHexError::InvalidStringLength => FromStrRadixErrKind::InvalidLength,
+			hex::FromHexError::OddLength => FromStrRadixErrKind::InvalidLength,
+		};
+
+		Self { kind, source: Some(FromStrRadixErrSrc::Hex(e)) }
+	}
+}
+
 /// Conversion from decimal string error
 #[derive(Debug, PartialEq)]
 pub enum FromDecStrErr {
@@ -38,9 +136,8 @@ pub enum FromDecStrErr {
 	InvalidLength,
 }
 
-#[cfg(feature = "std")]
-impl std::fmt::Display for FromDecStrErr {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for FromDecStrErr {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,
 			"{}",
@@ -54,6 +151,31 @@ impl std::fmt::Display for FromDecStrErr {
 
 #[cfg(feature = "std")]
 impl std::error::Error for FromDecStrErr {}
+
+#[derive(Debug)]
+pub struct FromHexError {
+	inner: hex::FromHexError,
+}
+
+impl fmt::Display for FromHexError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.inner)
+	}
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for FromHexError {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		Some(&self.inner)
+	}
+}
+
+#[doc(hidden)]
+impl From<hex::FromHexError> for FromHexError {
+	fn from(inner: hex::FromHexError) -> Self {
+		Self { inner }
+	}
+}
 
 #[macro_export]
 #[doc(hidden)]
@@ -467,6 +589,18 @@ macro_rules! construct_uint {
 			/// Maximum value.
 			pub const MAX: $name = $name([u64::max_value(); $n_words]);
 
+			/// Converts a string slice in a given base to an integer. Only supports radixes of 10
+			/// and 16.
+			pub fn from_str_radix(txt: &str, radix: u32) -> Result<Self, $crate::FromStrRadixErr> {
+				let parsed = match radix {
+					10 => Self::from_dec_str(txt)?,
+					16 => core::str::FromStr::from_str(txt)?,
+					_ => return Err($crate::FromStrRadixErr::unsupported()),
+				};
+
+				Ok(parsed)
+			}
+
 			/// Convert from a decimal string.
 			pub fn from_dec_str(value: &str) -> $crate::core_::result::Result<Self, $crate::FromDecStrErr> {
 				if !value.bytes().all(|b| b >= 48 && b <= 57) {
@@ -681,7 +815,7 @@ macro_rules! construct_uint {
 
 			fn full_shl(self, shift: u32) -> [u64; $n_words + 1] {
 				debug_assert!(shift < Self::WORD_BITS as u32);
-				let mut u = [064; $n_words + 1];
+				let mut u = [0u64; $n_words + 1];
 				let u_lo = self.0[0] << shift;
 				let u_hi = self >> (Self::WORD_BITS as u32 - shift);
 				u[0] = u_lo;
@@ -1550,31 +1684,35 @@ macro_rules! construct_uint {
 			}
 		}
 
-		$crate::impl_std_for_uint!($name, $n_words);
-		// `$n_words * 8` because macro expects bytes and
-		// uints use 64 bit (8 byte) words
-		$crate::impl_quickcheck_arbitrary_for_uint!($name, ($n_words * 8));
-		$crate::impl_arbitrary_for_uint!($name, ($n_words * 8));
-	}
-}
-
-#[cfg(feature = "std")]
-#[macro_export]
-#[doc(hidden)]
-macro_rules! impl_std_for_uint {
-	($name: ident, $n_words: tt) => {
 		impl $crate::core_::str::FromStr for $name {
-			type Err = $crate::rustc_hex::FromHexError;
+			type Err = $crate::FromHexError;
 
 			fn from_str(value: &str) -> $crate::core_::result::Result<$name, Self::Err> {
-				use $crate::rustc_hex::FromHex;
-				let bytes: Vec<u8> = match value.len() % 2 == 0 {
-					true => value.from_hex()?,
-					false => ("0".to_owned() + value).from_hex()?,
-				};
+				let value = value.strip_prefix("0x").unwrap_or(value);
+				const BYTES_LEN: usize = $n_words * 8;
+				const MAX_ENCODED_LEN: usize = BYTES_LEN * 2;
 
-				if $n_words * 8 < bytes.len() {
-					return Err(Self::Err::InvalidHexLength);
+				let mut bytes = [0_u8; BYTES_LEN];
+
+				let encoded = value.as_bytes();
+
+				if encoded.len() > MAX_ENCODED_LEN {
+					return Err($crate::hex::FromHexError::InvalidStringLength.into());
+				}
+
+				if encoded.len() % 2 == 0 {
+					let out = &mut bytes[BYTES_LEN - encoded.len() / 2..];
+
+					$crate::hex::decode_to_slice(encoded, out).map_err(Self::Err::from)?;
+				} else {
+					// Prepend '0' by overlaying our value on a scratch buffer filled with '0' characters.
+					let mut s = [b'0'; MAX_ENCODED_LEN];
+					s[MAX_ENCODED_LEN - encoded.len()..].copy_from_slice(encoded);
+					let encoded = &s[MAX_ENCODED_LEN - encoded.len() - 1..];
+
+					let out = &mut bytes[BYTES_LEN - encoded.len() / 2..];
+
+					$crate::hex::decode_to_slice(encoded, out).map_err(Self::Err::from)?;
 				}
 
 				let bytes_ref: &[u8] = &bytes;
@@ -1587,14 +1725,12 @@ macro_rules! impl_std_for_uint {
 				s.parse().unwrap()
 			}
 		}
-	};
-}
 
-#[cfg(not(feature = "std"))]
-#[macro_export]
-#[doc(hidden)]
-macro_rules! impl_std_for_uint {
-	($name: ident, $n_words: tt) => {};
+		// `$n_words * 8` because macro expects bytes and
+		// uints use 64 bit (8 byte) words
+		$crate::impl_quickcheck_arbitrary_for_uint!($name, ($n_words * 8));
+		$crate::impl_arbitrary_for_uint!($name, ($n_words * 8));
+	}
 }
 
 #[cfg(feature = "quickcheck")]
@@ -1606,8 +1742,8 @@ macro_rules! impl_quickcheck_arbitrary_for_uint {
 			fn arbitrary<G: $crate::qc::Gen>(g: &mut G) -> Self {
 				let mut res = [0u8; $n_bytes];
 
-				use $crate::rand::Rng;
-				let p: f64 = $crate::rand::rngs::OsRng.gen();
+				use $crate::rand07::Rng;
+				let p: f64 = $crate::rand07::rngs::OsRng.gen();
 				// make it more likely to generate smaller numbers that
 				// don't use up the full $n_bytes
 				let range =

@@ -133,7 +133,12 @@ fn uint256_from() {
 
 	// test initializtion from string
 	let sa = U256::from_str("0a").unwrap();
+	let sa2 = U256::from_str("0x0a").unwrap();
+	assert_eq!(sa2, sa);
 	assert_eq!(e, sa);
+	assert_eq!(U256([0, 0, 0, 0]), U256::from_str("").unwrap());
+	assert_eq!(U256([0x1, 0, 0, 0]), U256::from_str("1").unwrap());
+	assert_eq!(U256([0x101, 0, 0, 0]), U256::from_str("101").unwrap());
 	assert_eq!(U256([0x1010, 0, 0, 0]), U256::from_str("1010").unwrap());
 	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("12f0").unwrap());
 	assert_eq!(U256([0x12f0, 0, 0, 0]), U256::from_str("0000000012f0").unwrap());
@@ -145,6 +150,7 @@ fn uint256_from() {
 
 	// This string contains more bits than what fits in a U256.
 	assert!(U256::from_str("000000000000000000000000000000000000000000000000000000000000000000").is_err());
+	assert!(U256::from_str("100000000000000000000000000000000000000000000000000000000000000000").is_err());
 }
 
 #[test]
@@ -1010,6 +1016,15 @@ fn leading_zeros() {
 	assert_eq!(U256::from("f00000000000000000000001adbdd6bd6ff027485484b97f8a6a4c7129756dd1").leading_zeros(), 0);
 	assert_eq!(U256::from("0000000000000000000000000000000000000000000000000000000000000001").leading_zeros(), 255);
 	assert_eq!(U256::from("0000000000000000000000000000000000000000000000000000000000000000").leading_zeros(), 256);
+}
+
+#[test]
+fn issue_507_roundtrip() {
+	let mut b32 = <[u8; 32]>::default();
+	let a = U256::from(10);
+	a.to_little_endian(&mut b32);
+	let b = U256::from_little_endian(&b32[..]);
+	assert_eq!(a, b);
 }
 
 #[test]

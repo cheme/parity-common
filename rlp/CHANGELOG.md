@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 
+## [0.5.0] - 2021-01-05
+### Breaking
+- Use BytesMut for `RlpStream`'s backing buffer. [#453](https://github.com/paritytech/parity-common/pull/453)
+
+## [0.4.6] - 2020-09-29
+- Implement Encodable, Decodable for boxed types. [#427](https://github.com/paritytech/parity-common/pull/427)
+
 ## [0.4.5] - 2020-03-16
 ### Dependencies
 - Updated dependencies. [#361](https://github.com/paritytech/parity-common/pull/361)

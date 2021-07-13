@@ -36,15 +36,28 @@ pub enum DBOp {
 	Insert { col: u32, key: DBKey, value: DBValue },
 	Delete { col: u32, key: DBKey },
 	DeletePrefix { col: u32, prefix: DBKey },
+	InsertIndexed { col: u32, key: u64, value: DBValue },
+	DeleteIndexed { col: u32, key: u64 },
 }
 
 impl DBOp {
+	/// Return associated index if an indexed operation.
+	pub fn indexed(&self) -> Option<u64> {
+		match self {
+			DBOp::InsertIndexed { key, .. } => Some(*key),
+			DBOp::DeleteIndexed { key, .. } => Some(*key),
+			_ => None,
+		}
+	}
+
 	/// Returns the key associated with this operation.
 	pub fn key(&self) -> &[u8] {
 		match *self {
 			DBOp::Insert { ref key, .. } => key,
 			DBOp::Delete { ref key, .. } => key,
 			DBOp::DeletePrefix { ref prefix, .. } => prefix,
+			DBOp::InsertIndexed { .. } => &[],
+			DBOp::DeleteIndexed { .. } => &[],
 		}
 	}
 
@@ -54,6 +67,8 @@ impl DBOp {
 			DBOp::Insert { col, .. } => col,
 			DBOp::Delete { col, .. } => col,
 			DBOp::DeletePrefix { col, .. } => col,
+			DBOp::InsertIndexed { col, .. } => col,
+			DBOp::DeleteIndexed { col, .. } => col,
 		}
 	}
 }
